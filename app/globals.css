@@ -1,0 +1,145 @@
+/* =====================================================================
+   Grading SaaS — Design tokens
+   A distinct identity from Buspulse (this is a different product):
+   deep academic indigo + a warm gold/amber accent — the color of a
+   wax seal or an honor cord, not a transit-safety palette. Signature
+   motif: a short gold underline beneath headings, like a mark from a
+   teacher's pen — used structurally (section headers), never as
+   random decoration.
+   ===================================================================== */
+
+:root {
+  --indigo: #2C3454;
+  --indigo-light: #3D4670;
+  --gold: #C99A3B;
+  --gold-dark: #A97F28;
+  --cream: #F7F5F0;
+  --steel: #6B7280;
+  --steel-light: #9AA3AE;
+  --fog: #ECE9E2;
+  --fog-dark: #DAD5C9;
+  --green: #2E7D32;
+  --red: #B3261E;
+  --white: #FFFFFF;
+
+  --font-display: "Cairo", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans Arabic", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+
+  --shadow-sm: 0 1px 3px rgba(44, 52, 84, 0.08);
+  --shadow-md: 0 4px 16px rgba(44, 52, 84, 0.10);
+  --shadow-lg: 0 10px 30px rgba(44, 52, 84, 0.16);
+}
+
+* { box-sizing: border-box; }
+
+html { font-size: 17px; }
+
+body {
+  font-family: var(--font-body);
+  color: #22262E;
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { font-family: var(--font-display); }
+
+.grade-underline {
+  width: 60px;
+  height: 4px;
+  background: var(--gold);
+  border-radius: 2px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.btn:active { transform: translateY(0); }
+.btn-primary { background: var(--indigo); color: white; }
+.btn-primary:hover { background: var(--indigo-light); }
+.btn-gold { background: var(--gold); color: white; }
+.btn-gold:hover { background: var(--gold-dark); }
+.btn-secondary { background: white; color: var(--indigo); border: 1.5px solid var(--fog-dark); }
+.btn-secondary:hover { border-color: var(--steel); }
+
+.card {
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.input {
+  width: 100%;
+  padding: 10px 13px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--fog-dark);
+  font-size: 1rem;
+  font-family: var(--font-body);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 154, 59, 0.16);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: right;
+  padding: 12px 1.25rem;
+  border: none;
+  background: transparent;
+  color: #C7CBE0;
+  font-size: 0.98rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  border-inline-start: 3px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nav-item:hover { background: rgba(255,255,255,0.06); color: white; }
+.nav-item.active { background: var(--indigo-light); color: white; font-weight: 700; border-inline-start-color: var(--gold); }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.data-table th {
+  text-align: right; padding: 11px 14px; background: var(--indigo);
+  color: white; font-weight: 700; position: sticky; top: 0;
+}
+.data-table td { text-align: right; padding: 10px 14px; border-bottom: 1px solid var(--fog); }
+.data-table tbody tr:hover { background: var(--cream); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 11px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+}
+.badge-pass { background: #E5F1E6; color: var(--green); }
+.badge-fail { background: #FBEAE8; color: var(--red); }
+.badge-pending { background: #FBF3E3; color: var(--gold-dark); }
+
+.fade-in { animation: fade-in-up 0.3s ease both; }
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .fade-in { animation: none !important; transition: none !important; }
+}
