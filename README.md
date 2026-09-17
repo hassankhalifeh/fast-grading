@@ -4,18 +4,18 @@ A real Next.js app, built and verified (`npm run build` passes with zero errors)
 
 ## Before running this app — required SQL files
 
-This app is built against the **full, latest schema**, including the two upgrade files. Run these in order on your Grading SaaS Supabase project (separate from Buspulse) if you haven't already:
+**Status on the live Supabase project (`rpxfbbznsctoyevfcvyu` / "Fast Grading"): everything below is already applied.** The base schema (01-06 — accounts, app_users, subjects, class_sections, students, exams, grades, capabilities/roles, subscription limits, notifications, term/class/school ranking views) was already live and is considerably richer than the file names below suggest (role-based RLS, per-plan class/student limits, weighted multi-component scoring views). Files `07_bulk_import.sql` through `12_security_fixes.sql` in this folder are what was added on top on 2026-09-17, and they've been rewritten to match the real column names/types found on the live database (`capabilities.key` not `id`/`code`, `has_capability(code)` with no actor argument, `audit_logs` with a restricted `action_type` enum + `jsonb` columns, `grade_history.resolution_method`). The zip `grading-saas-migrations-07-12.zip` bundles the same six files plus a `00_RUN_ALL_07_TO_12.sql` combined script for replaying on another environment (e.g. staging) — always diff column names against that environment's actual schema first, since the earlier 07-11 draft looked reasonable but didn't match reality until this pass.
 
-1. `01_schema.sql`, `02_triggers.sql`, `03_views_and_rls.sql` — already run ✅ (per your earlier testing)
-2. `04_config_permissions_ranking.sql` — **not yet run**
-3. `05_exam_components_and_overrides.sql` — **not yet run**
-4. `06_rls_for_upgrade_tables.sql` — **new, not yet run** — see below, this closes a security gap in files 04/05
+`12_security_fixes.sql` fixes two issues Supabase's advisor caught that predate this session's changes: `grade_history` had RLS enabled with zero policies (silently blocking file 08's writes), and six reporting views (including `v_grade_report`) were implicitly `SECURITY DEFINER`, which let any authenticated user read every account's data through them.
 
-Until 04-06 are run, these sections will show errors: **أنواع الاختبارات، سياسة العلامات، الصلاحيات، المراحل**, and the class-level weight override / multi-component grading. Everything else (**المواد، الصفوف، الطلاب، الامتحانات، إدخال العلامات البسيط، التقارير**) works against files 01-03 alone.
+### Known pre-existing gaps not yet fixed (flagged, not resolved)
 
-### About file 06 — please run this one
-
-While building this app, I found that files 04 and 05 created several new tables (`capabilities`, `user_capabilities`, `institutions`, `schools`, `stages`, `exam_types`, `exam_type_components`, `grading_policies`, `class_exam_type_weights`, `terms`) **without enabling Row Level Security** on them — an oversight in those files, not something that changed since. Without file 06, those tables are unprotected. Run it right after 04 and 05, before using the app for real data.
+Supabase's advisor also flagged, unrelated to this session's work:
+- `subjects`, `custom_roles`, `notification_templates`, `class_subject_teachers` — RLS enabled with **no policies at all** (currently unusable via the API for any non-service-role caller, including `subjects` which the base dashboard screens read directly).
+- The `user_capabilities` RLS policy scopes by account only, with no capability/role check — any account member can currently grant/revoke any capability for any other user in the account directly via the Supabase client.
+- 27 functions (mostly pre-existing) have a mutable `search_path` (WARN-level hardening suggestion).
+- `pg_trgm` extension installed in the `public` schema instead of a dedicated schema (WARN, cosmetic).
+- Leaked-password protection is off in Supabase Auth settings (toggle in the dashboard, not a SQL fix).
 
 ## Running it locally
 
