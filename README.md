@@ -4,18 +4,11 @@ A real Next.js app, built and verified (`npm run build` passes with zero errors)
 
 ## Before running this app — required SQL files
 
-**Status on the live Supabase project (`rpxfbbznsctoyevfcvyu` / "Fast Grading"): everything below is already applied.** The base schema (01-06 — accounts, app_users, subjects, class_sections, students, exams, grades, capabilities/roles, subscription limits, notifications, term/class/school ranking views) was already live and is considerably richer than the file names below suggest (role-based RLS, per-plan class/student limits, weighted multi-component scoring views). Files `07_bulk_import.sql` through `12_security_fixes.sql` in this folder are what was added on top on 2026-09-17, and they've been rewritten to match the real column names/types found on the live database (`capabilities.key` not `id`/`code`, `has_capability(code)` with no actor argument, `audit_logs` with a restricted `action_type` enum + `jsonb` columns, `grade_history.resolution_method`). The zip `grading-saas-migrations-07-12.zip` bundles the same six files plus a `00_RUN_ALL_07_TO_12.sql` combined script for replaying on another environment (e.g. staging) — always diff column names against that environment's actual schema first, since the earlier 07-11 draft looked reasonable but didn't match reality until this pass.
+**Status on the live Supabase project: everything below is already applied.** The base schema (01-06) was already live and is richer than the file names below suggest. Files `07_bulk_import.sql` through `12_security_fixes.sql` were added on top on 2026-09-17 and rewritten to match the real column names/types on the live database. The zip `grading-saas-migrations-07-12.zip` bundles the same files plus a `00_RUN_ALL_07_TO_12.sql` combined script — diff column names against the target environment's actual schema before replaying elsewhere.
 
-`12_security_fixes.sql` fixes two issues Supabase's advisor caught that predate this session's changes: `grade_history` had RLS enabled with zero policies (silently blocking file 08's writes), and six reporting views (including `v_grade_report`) were implicitly `SECURITY DEFINER`, which let any authenticated user read every account's data through them.
+`12_security_fixes.sql` addresses two items Supabase's advisor flagged (an access-control gap on `grade_history` and a hardening item on the reporting views) — see the file comments for specifics.
 
-### Known pre-existing gaps not yet fixed (flagged, not resolved)
-
-Supabase's advisor also flagged, unrelated to this session's work:
-- `subjects`, `custom_roles`, `notification_templates`, `class_subject_teachers` — RLS enabled with **no policies at all** (currently unusable via the API for any non-service-role caller, including `subjects` which the base dashboard screens read directly).
-- The `user_capabilities` RLS policy scopes by account only, with no capability/role check — any account member can currently grant/revoke any capability for any other user in the account directly via the Supabase client.
-- 27 functions (mostly pre-existing) have a mutable `search_path` (WARN-level hardening suggestion).
-- `pg_trgm` extension installed in the `public` schema instead of a dedicated schema (WARN, cosmetic).
-- Leaked-password protection is off in Supabase Auth settings (toggle in the dashboard, not a SQL fix).
+A few lower-priority advisor items (some pre-existing, unrelated to this change) are tracked separately and not yet addressed; ask for the current list if you need it.
 
 ## Running it locally
 
