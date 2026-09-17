@@ -4,11 +4,9 @@ A real Next.js app, built and verified (`npm run build` passes with zero errors)
 
 ## Before running this app — required SQL files
 
-**Status on the live Supabase project: everything below is already applied.** The base schema (01-06) was already live and is richer than the file names below suggest. Files `07_bulk_import.sql` through `12_security_fixes.sql` were added on top on 2026-09-17 and rewritten to match the real column names/types on the live database. The zip `grading-saas-migrations-07-12.zip` bundles the same files plus a `00_RUN_ALL_07_TO_12.sql` combined script — diff column names against the target environment's actual schema before replaying elsewhere.
+**Status on the live Supabase project: everything below is already applied.** The base schema (01-06) was already live and is richer than the file names below suggest. Files `07_bulk_import.sql` through `16_fix_audit_logs_rls_initplan.sql` were added on top on 2026-09-17 and rewritten to match the real column names/types on the live database. Files 13-16 close out the rest of Supabase's security/performance advisor findings that were in scope for this pass (access-control and policy-coverage gaps, function hardening, redundant-policy cleanup) — see each file's header comment for specifics.
 
-`12_security_fixes.sql` addresses two items Supabase's advisor flagged (an access-control gap on `grade_history` and a hardening item on the reporting views) — see the file comments for specifics.
-
-A few lower-priority advisor items (some pre-existing, unrelated to this change) are tracked separately and not yet addressed; ask for the current list if you need it.
+Two advisor items remain, both outside what a SQL migration can fix: an extension's schema placement (cosmetic), and a Supabase Auth setting that's a one-click toggle in the dashboard, not a migration.
 
 ## Running it locally
 
