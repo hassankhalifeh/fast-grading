@@ -4,7 +4,7 @@ A real Next.js app, built and verified (`npm run build` passes with zero errors)
 
 ## Before running this app — required SQL files
 
-**Status on the live Supabase project: everything below is already applied.** The base schema (01-06) was already live and is richer than the file names below suggest. Files `07_bulk_import.sql` through `16_fix_audit_logs_rls_initplan.sql` were added on top on 2026-09-17 and rewritten to match the real column names/types on the live database. Files 13-16 close out the rest of Supabase's security/performance advisor findings that were in scope for this pass (access-control and policy-coverage gaps, function hardening, redundant-policy cleanup) — see each file's header comment for specifics.
+**Status on the live Supabase project: everything below is already applied.** The base schema (01-06) was already live and is richer than the file names below suggest. Files `07_bulk_import.sql` through `23_revoke_anon_execute_on_helpers.sql` were added on top on 2026-09-17 and rewritten to match the real column names/types on the live database. Files 13-16 close out the rest of Supabase's security/performance advisor findings that were in scope for this pass (access-control and policy-coverage gaps, function hardening, redundant-policy cleanup) — see each file's header comment for specifics.
 
 Two advisor items remain, both outside what a SQL migration can fix: an extension's schema placement (cosmetic), and a Supabase Auth setting that's a one-click toggle in the dashboard, not a migration.
 
@@ -47,3 +47,7 @@ Identical steps to Buspulse — `git init`, push to a new repo, import into Verc
 - Voice-to-data grade entry (manual entry only, for now)
 - The parent notification Review & Compose Wizard
 - A dedicated Exams-per-class-with-weight-override editor (`class_exam_type_weights` exists in the schema; editing it currently requires SQL — a natural next screen to add)
+
+## Academic structure and weights (files 20-23)
+
+Grading periods are configurable per school instead of hard-coded: academic year → terms → assessment items (e.g. coursework 1, term exam) → exams. Averages are computed automatically (exam → item → term → year) from default weights, which can be overridden by stage, class, subject or class+subject (most specific wins; weight 0 disables an item for that scope). Supervisors' permissions can be limited to a scope group (stage / floor / department / any mix) from the permissions screen. Dashboard sections: "الهيكل الأكاديمي" (setup wizard + defaults), "المعدلات والأوزان" (overrides), and scope groups under "الصلاحيات". "أنواع الاختبارات" is now "قوالب الاختبارات" (the multi-mark structure of a single exam).

@@ -123,3 +123,70 @@ export interface GradeReportRow {
   passing_status: string;
   grade_status: string;
 }
+
+export type AssessmentKind = "coursework" | "term_exam" | "other";
+
+export interface AcademicYear {
+  id: string;
+  account_id: string;
+  name: string;
+  is_current: boolean;
+}
+
+export interface TermRow extends Term {
+  academic_year_id: string | null;
+  order_index: number;
+  default_weight: number | null;
+}
+
+export interface AssessmentItem {
+  id: string;
+  account_id: string;
+  term_id: string;
+  name: string;
+  kind: AssessmentKind;
+  order_index: number;
+  default_weight: number | null;
+  default_template_id: string | null;
+}
+
+export type OverrideScope = "school" | "stage" | "class" | "subject" | "class_subject";
+export type OverrideTarget = "term_weight" | "item_weight" | "exam_weight";
+
+export interface GradingOverride {
+  id: string;
+  account_id: string;
+  scope: OverrideScope;
+  stage_id: string | null;
+  class_section_id: string | null;
+  subject_id: string | null;
+  target: OverrideTarget;
+  term_id: string | null;
+  item_id: string | null;
+  exam_id: string | null;
+  value: number;
+  note: string | null;
+}
+
+export interface ScopeGroup {
+  id: string;
+  account_id: string;
+  name: string;
+  kind: string;
+}
+
+export interface ScopeGroupMember {
+  id: string;
+  group_id: string;
+  member_type: "stage" | "class" | "subject";
+  stage_id: string | null;
+  class_section_id: string | null;
+  subject_id: string | null;
+}
+
+export interface UserScopedCapability {
+  id: string;
+  app_user_id: string;
+  capability_key: string;
+  group_id: string;
+}

@@ -6,23 +6,28 @@ import { useCapabilities } from "@/lib/useCapabilities";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
 import GradingPolicyPanel from "./components/GradingPolicyPanel";
+import AcademicStructurePanel from "./components/AcademicStructurePanel";
+import WeightsPanel from "./components/WeightsPanel";
+import ScopesPanel from "./components/ScopesPanel";
 import PermissionsMatrix from "./components/PermissionsMatrix";
 import ExamTypeComponentsModal from "./components/ExamTypeComponentsModal";
 import GradeEntryPanel from "./components/GradeEntryPanel";
 import ReportsPanel from "./components/ReportsPanel";
 
-type Section = "subjects" | "stages" | "examTypes" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "subjects" | "stages" | "examTypes" | "academic" | "weights" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string }[] = [
   { id: "subjects", label: "المواد", icon: BookOpen, capability: "config.manage" },
   { id: "stages", label: "المراحل", icon: Layers, capability: "config.manage" },
-  { id: "examTypes", label: "أنواع الاختبارات", icon: ListChecks, capability: "config.manage" },
+  { id: "examTypes", label: "قوالب الاختبارات", icon: ListChecks, capability: "config.manage" },
+  { id: "academic", label: "الهيكل الأكاديمي", icon: CalendarRange, capability: "config.manage" },
   { id: "gradingPolicy", label: "سياسة العلامات", icon: Settings, capability: "config.manage" },
+  { id: "weights", label: "المعدلات والأوزان", icon: Scale, capability: "grading.adjust" },
   { id: "classSections", label: "الصفوف", icon: GraduationCap, capability: "roster.manage" },
   { id: "students", label: "الطلاب", icon: Users, capability: "roster.manage" },
   { id: "exams", label: "الامتحانات", icon: FileText, capability: "config.manage" },
@@ -36,7 +41,7 @@ const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[
   stages: { table: "stages", columns: [{ key: "stage_name", label: "اسم المرحلة" }, { key: "order_index", label: "الترتيب" }] },
   examTypes: {
     table: "exam_types",
-    columns: [{ key: "name", label: "الاسم" }, { key: "weight_percent", label: "الوزن %" }, { key: "category", label: "الفئة" }],
+    columns: [{ key: "name", label: "اسم القالب" }],
   },
   classSections: {
     table: "class_sections",
@@ -62,6 +67,7 @@ export default function DashboardPage() {
   const [refStages, setRefStages] = useState<{ value: string; label: string }[]>([]);
   const [refExamTypes, setRefExamTypes] = useState<{ value: string; label: string }[]>([]);
   const [refClassSections, setRefClassSections] = useState<{ value: string; label: string }[]>([]);
+  const [refItems, setRefItems] = useState<{ value: string; label: string }[]>([]);
 
   function loadRows() {
     const cfg = SIMPLE_SECTIONS[section];
@@ -82,6 +88,17 @@ export default function DashboardPage() {
       .then(({ data }) => setRefExamTypes((data ?? []).map((s) => ({ value: s.id, label: s.name }))));
     supabase.from("class_sections").select("id, name").eq("account_id", appUser.account_id)
       .then(({ data }) => setRefClassSections((data ?? []).map((s) => ({ value: s.id, label: s.name }))));
+    Promise.all([
+      supabase.from("terms").select("id, name, order_index").eq("account_id", appUser.account_id),
+      supabase.from("assessment_items").select("id, name, term_id, order_index").eq("account_id", appUser.account_id),
+    ]).then(([t, i]) => {
+      const terms = t.data ?? [];
+      const list = (i.data ?? [])
+        .map((it: any) => ({ it, term: terms.find((x: any) => x.id === it.term_id) }))
+        .sort((a: any, b: any) => (a.term?.order_index ?? 0) - (b.term?.order_index ?? 0) || a.it.order_index - b.it.order_index)
+        .map(({ it, term }: any) => ({ value: it.id, label: `${term?.name ?? ""} — ${it.name}` }));
+      setRefItems(list);
+    });
   }, [appUser, rows]);
 
   if (loading || capabilities === null) return <p style={{ padding: 24, color: "var(--steel)" }}>جارٍ التحميل...</p>;
@@ -96,16 +113,7 @@ export default function DashboardPage() {
       { key: "order_index", label: "ترتيب العرض", type: "number", required: true },
     ],
     examTypes: [
-      { key: "name", label: "الاسم", type: "text", required: true },
-      { key: "weight_percent", label: "الوزن الافتراضي بالمدرسة (%)", type: "number", required: true },
-      {
-        key: "category", label: "الفئة", type: "select",
-        options: [
-          { value: "Coursework", label: "السعي" },
-          { value: "Term", label: "الفصل" },
-          { value: "Final", label: "المعدل النهائي" },
-        ],
-      },
+      { key: "name", label: "اسم القالب (مثلاً: تحريري + شفهي)", type: "text", required: true },
     ],
     classSections: [
       { key: "name", label: "اسم الصف", type: "text", required: true, placeholder: "مثلاً: الصف الثامن" },
@@ -125,7 +133,8 @@ export default function DashboardPage() {
       { key: "exam_date", label: "التاريخ", type: "date", required: true },
       { key: "class_section_id", label: "الصف", type: "select", required: true, options: refClassSections },
       { key: "subject_id", label: "المادة", type: "select", required: true, options: refSubjects },
-      { key: "exam_type_id", label: "نوع الاختبار", type: "select", options: refExamTypes },
+      { key: "item_id", label: "بند التقييم (الفصل — السعي/الامتحان)", type: "select", required: true, options: refItems },
+      { key: "exam_type_id", label: "قالب علامات الاختبار (اختياري)", type: "select", options: refExamTypes },
       { key: "max_score", label: "العلامة القصوى", type: "number" },
     ],
   };
@@ -150,6 +159,7 @@ export default function DashboardPage() {
 
     const payload: Record<string, any> = { ...values, account_id: appUser.account_id };
     if (section === "classSections") payload.created_by = appUser.id;
+    if (section === "examTypes") payload.weight_percent = 0; // الوزن صار من "الهيكل الأكاديمي" (عمود قديم مطلوب بالجدول)
 
     const { error } = await supabase.from(cfg.table).insert(payload);
     if (error) return { error: error.message };
@@ -185,7 +195,14 @@ export default function DashboardPage() {
         <div className="grade-underline" style={{ marginBottom: 18 }} />
 
         {section === "gradingPolicy" && <GradingPolicyPanel accountId={appUser.account_id} />}
-        {section === "permissions" && <PermissionsMatrix accountId={appUser.account_id} />}
+        {section === "academic" && <AcademicStructurePanel accountId={appUser.account_id} />}
+        {section === "weights" && <WeightsPanel accountId={appUser.account_id} appUser={appUser} />}
+        {section === "permissions" && (
+          <>
+            <PermissionsMatrix accountId={appUser.account_id} />
+            <ScopesPanel accountId={appUser.account_id} appUser={appUser} />
+          </>
+        )}
         {section === "reports" && <ReportsPanel />}
         {section === "gradeEntry" && (
           <GradeEntryPanel accountId={appUser.account_id} appUser={appUser} canToggleWindow={capabilities.has("window.toggle")} />
