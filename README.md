@@ -51,3 +51,9 @@ Identical steps to Buspulse — `git init`, push to a new repo, import into Verc
 ## Academic structure and weights (files 20-23)
 
 Grading periods are configurable per school instead of hard-coded: academic year → terms → assessment items (e.g. coursework 1, term exam) → exams. Averages are computed automatically (exam → item → term → year) from default weights, which can be overridden by stage, class, subject or class+subject (most specific wins; weight 0 disables an item for that scope). Supervisors' permissions can be limited to a scope group (stage / floor / department / any mix) from the permissions screen. Dashboard sections: "الهيكل الأكاديمي" (setup wizard + defaults), "المعدلات والأوزان" (overrides), and scope groups under "الصلاحيات". "أنواع الاختبارات" is now "قوالب الاختبارات" (the multi-mark structure of a single exam).
+
+## Teachers, users and organizational structure (files 24-26)
+
+- **Teacher assignments (24):** one primary teacher per (class section, subject); a second teacher only through a request approved by the general principal.
+- **Users (25):** invitations go through the `invite-user` Edge Function (service role, rank rules, one general principal); list/deactivate via RPCs.
+- **Organization (26):** optional buildings → floors → class sections; exclusive supervisors at class / floor / stage / building level (one per target) with unlimited assistants; per-level capabilities editable per school; building supervisors are limited to building administration. If a lower level has no owner, authority falls to the next higher one up to the general principal, and a higher level can act in place of a lower one.
