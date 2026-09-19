@@ -57,3 +57,10 @@ Grading periods are configurable per school instead of hard-coded: academic year
 - **Teacher assignments (24):** one primary teacher per (class section, subject); a second teacher only through a request approved by the general principal.
 - **Users (25):** invitations go through the `invite-user` Edge Function (service role, rank rules, one general principal); list/deactivate via RPCs.
 - **Organization (26):** optional buildings → floors → class sections; exclusive supervisors at class / floor / stage / building level (one per target) with unlimited assistants; per-level capabilities editable per school; building supervisors are limited to building administration. If a lower level has no owner, authority falls to the next higher one up to the general principal, and a higher level can act in place of a lower one.
+
+## Import, reports, supplementary exam (files 27-32)
+
+- **27/28:** exam lock/approval, grade entry and reassignment functions now check permissions themselves (scoped to the class); lock columns on `exams` change only through the lock functions; bulk-import commit enrolls new students and stores parent data; Arabic names are normalized before matching (hamza, ta marbuta, diacritics).
+- **29:** grade reads are scoped (assigned teacher, class/stage supervisor, principal), and reports expose applied weights with their source.
+- **30:** server-side (no user) writes to grades are allowed only while an exam is unlocked.
+- **31:** supplementary exam sessions: admin-chosen subjects and eligible students (weak students suggested), one exam per class/subject writable only by eligible students, final subject score and promotion computed by the session policy (replace / higher of / capped at pass mark). It never changes term or year averages.

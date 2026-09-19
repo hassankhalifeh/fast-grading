@@ -56,7 +56,15 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
 
     const { data: enr } = await supabase.from("class_enrollments").select("student_id, students(full_name)")
       .eq("class_section_id", e.class_section_id).eq("status", "active");
-    setRoster((enr ?? []).map((r: any) => ({ student_id: r.student_id, full_name: r.students?.full_name })));
+    let rosterRows: RosterStudent[] = (enr ?? []).map((r: any) => ({ student_id: r.student_id, full_name: r.students?.full_name }));
+    // الامتحان التكميلي: القائمة هي المستحقون لهذه المادة فقط
+    const sessionId = (e as any).supplementary_session_id as string | null | undefined;
+    if (sessionId) {
+      const { data: el } = await supabase.from("supplementary_eligibility").select("student_id").eq("session_id", sessionId).eq("subject_id", e.subject_id).eq("class_section_id", e.class_section_id);
+      const ids = new Set((el ?? []).map((x: any) => x.student_id));
+      rosterRows = rosterRows.filter((s) => ids.has(s.student_id));
+    }
+    setRoster(rosterRows);
 
     const { data: gr } = await supabase.from("grades").select("id, student_id, component_id, score").eq("exam_id", e.id);
     const ex: Record<string, ExistingGrade> = {};
