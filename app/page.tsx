@@ -16,13 +16,25 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // الرابط القادم من إيميل "استعادة كلمة السر" بيفتح جلسة مؤقتة ويطلق هذا الحدث
+  // روابط الإيميل (استعادة كلمة السر / دعوة مستخدم) بتفتح جلسة مؤقتة: لازم المستخدم يحدد كلمة سر.
+  // مستخدم مسجّل دخوله بشكل عادي بيروح مباشرة للداشبورد.
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setRecoveryMode(true);
+    let needsPassword = /type=(recovery|invite)/.test(window.location.hash);
+    if (needsPassword) setRecoveryMode(true);
+
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") { needsPassword = true; setRecoveryMode(true); }
+      if (session?.user?.user_metadata?.needs_password) { needsPassword = true; setRecoveryMode(true); }
     });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return;
+      if (session.user.user_metadata?.needs_password) { setRecoveryMode(true); return; }
+      if (!needsPassword) router.replace("/dashboard");
+    });
+
     return () => data.subscription.unsubscribe();
-  }, []);
+  }, [router]);
 
   async function handleSetNewPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -30,7 +42,7 @@ export default function LoginPage() {
     if (newPassword.length < 8) { setError("كلمة المرور يجب ألا تقل عن 8 أحرف"); return; }
     if (newPassword !== confirmPassword) { setError("كلمتا المرور غير متطابقتين"); return; }
     setSubmitting(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword, data: { needs_password: false } });
     if (updateError) { setError(updateError.message); setSubmitting(false); return; }
     router.push("/dashboard");
   }

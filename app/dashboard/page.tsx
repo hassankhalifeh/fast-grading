@@ -6,7 +6,7 @@ import { useCapabilities } from "@/lib/useCapabilities";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -15,12 +15,13 @@ import AcademicStructurePanel from "./components/AcademicStructurePanel";
 import WeightsPanel from "./components/WeightsPanel";
 import ScopesPanel from "./components/ScopesPanel";
 import TeacherAssignmentsPanel from "./components/TeacherAssignmentsPanel";
+import UsersPanel from "./components/UsersPanel";
 import PermissionsMatrix from "./components/PermissionsMatrix";
 import ExamTypeComponentsModal from "./components/ExamTypeComponentsModal";
 import GradeEntryPanel from "./components/GradeEntryPanel";
 import ReportsPanel from "./components/ReportsPanel";
 
-type Section = "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string }[] = [
   { id: "subjects", label: "المواد", icon: BookOpen, capability: "config.manage" },
@@ -34,6 +35,7 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string }[]
   { id: "teachers", label: "إسناد الأساتذة", icon: UserCheck, capability: "roster.manage" },
   { id: "exams", label: "الامتحانات", icon: FileText, capability: "config.manage" },
   { id: "gradeEntry", label: "إدخال العلامات", icon: PencilLine, capability: "grades.enter" },
+  { id: "users", label: "المستخدمون", icon: UserPlus, capability: "users.manage" },
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck, capability: "users.manage" },
   { id: "reports", label: "التقارير", icon: BarChart3, capability: "reports.view" },
 ];
@@ -200,6 +202,7 @@ export default function DashboardPage() {
         {section === "teachers" && (
           <TeacherAssignmentsPanel accountId={appUser.account_id} appUser={appUser} canApprove={capabilities.has("teaching.approve_secondary")} />
         )}
+        {section === "users" && <UsersPanel appUser={appUser} />}
         {section === "academic" && <AcademicStructurePanel accountId={appUser.account_id} />}
         {section === "weights" && <WeightsPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "permissions" && (
