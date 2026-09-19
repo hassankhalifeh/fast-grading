@@ -217,7 +217,7 @@ export default function DashboardPage() {
             <ScopesPanel accountId={appUser.account_id} appUser={appUser} />
           </>
         )}
-        {section === "reports" && <ReportsPanel />}
+        {section === "reports" && <ReportsPanel accountId={appUser.account_id} />}
         {section === "gradeEntry" && (
           <GradeEntryPanel accountId={appUser.account_id} appUser={appUser} canToggleWindow={capabilities.has("window.toggle")}
             canFinalize={capabilities.has("grades.finalize_submission")} canEditOthers={capabilities.has("grades.edit_others")} />
