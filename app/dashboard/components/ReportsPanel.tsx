@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import SimpleTable from "./SimpleTable";
+import ReportCard from "./ReportCard";
 
 interface Named { id: string; name: string }
-type Tab = "card" | "class" | "summary" | "weights";
+type Tab = "final" | "card" | "class" | "summary" | "weights";
 
 const SOURCE_LABEL: Record<string, string> = {
   default: "افتراضي", school: "المدرسة", stage: "المرحلة", class: "الصف", subject: "المادة", class_subject: "صف + مادة",
@@ -153,9 +154,11 @@ export default function ReportsPanel({ accountId }: { accountId: string }) {
   return (
     <div className="fade-in">
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        {tabBtn("class", "معدلات الصف")}{tabBtn("summary", "ملخص الصفوف والمدرسة")}{tabBtn("weights", "الأوزان المطبَّقة")}{tabBtn("card", "بطاقة العلامات")}
+        {tabBtn("final", "الشهادة النهائية")}{tabBtn("class", "معدلات الصف")}{tabBtn("summary", "ملخص الصفوف والمدرسة")}{tabBtn("weights", "الأوزان المطبَّقة")}{tabBtn("card", "بطاقة العلامات")}
       </div>
       {loading && <p style={{ color: "var(--steel)", fontSize: "0.85rem" }}>جارٍ التحميل...</p>}
+
+      {tab === "final" && <ReportCard accountId={accountId} />}
 
       {tab === "class" && (
         <>
