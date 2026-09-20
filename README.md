@@ -64,3 +64,7 @@ Grading periods are configurable per school instead of hard-coded: academic year
 - **29:** grade reads are scoped (assigned teacher, class/stage supervisor, principal), and reports expose applied weights with their source.
 - **30:** server-side (no user) writes to grades are allowed only while an exam is unlocked.
 - **31:** supplementary exam sessions: admin-chosen subjects and eligible students (weak students suggested), one exam per class/subject writable only by eligible students, final subject score and promotion computed by the session policy (replace / higher of / capped at pass mark). It never changes term or year averages.
+
+## Parent notifications (file 34)
+
+Section "إشعارات أولياء الأمور" (capability `notifications.send`): choose an exam, compose a message from placeholders ({الطالب} {الولي} {المادة} {الامتحان} {العلامة} {الحد} {الصف} {المدرسة}) or a saved template, review the roster (everyone with a valid parent phone and a grade is ticked by default; untick anyone you do not want), then send. Each message is logged in `notifications_log` (batch, phone, status). Sending opens WhatsApp click-to-chat with the message prefilled, so the sender presses Send in WhatsApp; fully automatic sending requires a WhatsApp provider account and an Edge Function.

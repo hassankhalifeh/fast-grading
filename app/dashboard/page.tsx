@@ -6,7 +6,7 @@ import { useCapabilities } from "@/lib/useCapabilities";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -23,8 +23,9 @@ import PermissionsMatrix from "./components/PermissionsMatrix";
 import ExamTypeComponentsModal from "./components/ExamTypeComponentsModal";
 import GradeEntryPanel from "./components/GradeEntryPanel";
 import ReportsPanel from "./components/ReportsPanel";
+import NotificationsPanel from "./components/NotificationsPanel";
 
-type Section = "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string }[] = [
   { id: "subjects", label: "المواد", icon: BookOpen, capability: "config.manage" },
@@ -44,6 +45,7 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string }[]
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck, capability: "users.manage" },
   { id: "supplementary", label: "الامتحان التكميلي", icon: LifeBuoy, capability: "supplementary.manage" },
   { id: "reports", label: "التقارير", icon: BarChart3, capability: "reports.view" },
+  { id: "notifications", label: "إشعارات أولياء الأمور", icon: MessageCircle, capability: "notifications.send" },
 ];
 
 const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[] }>> = {
@@ -210,6 +212,7 @@ export default function DashboardPage() {
         )}
         {section === "import" && <ImportPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "supplementary" && <SupplementaryPanel accountId={appUser.account_id} appUser={appUser} />}
+        {section === "notifications" && <NotificationsPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "org" && <OrgStructurePanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "users" && <UsersPanel appUser={appUser} />}
         {section === "academic" && <AcademicStructurePanel accountId={appUser.account_id} />}
