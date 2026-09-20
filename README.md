@@ -44,8 +44,7 @@ Identical steps to Buspulse — `git init`, push to a new repo, import into Verc
 
 ## What's deliberately not built yet
 
-- Voice-to-data grade entry (manual entry only, for now)
-- The parent notification Review & Compose Wizard
+- Automatic WhatsApp sending (currently click-to-chat; needs a provider such as WhatsApp Cloud API or Twilio)
 - A dedicated Exams-per-class-with-weight-override editor (`class_exam_type_weights` exists in the schema; editing it currently requires SQL — a natural next screen to add)
 
 ## Academic structure and weights (files 20-23)
