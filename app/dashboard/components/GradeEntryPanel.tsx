@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { AppUser, Exam, ExamTypeComponent } from "@/lib/types";
 import { Lock, Unlock } from "lucide-react";
+import VoiceEntry from "./VoiceEntry";
 
 interface RosterStudent { student_id: string; full_name: string }
 interface ExistingGrade { id: string; score: number }
-interface Conflict { student_id: string; name: string; component_id: string | null; compName: string; old: number; new: number; resolution: "apply_new" | "keep_old" }
+interface Conflict { student_id: string; name: string; component_id: string | null; compName: string; old: number; new: number; resolution: "apply_new" | "keep_old"; voice?: boolean }
 type ExamRow = Exam & { lock_tier?: number };
 
 const TIER_LABEL: Record<number, string> = { 0: "مفتوح", 1: "قفل جزئي (مساعد الناظر فأعلى)", 2: "معتمد نهائياً" };
@@ -29,6 +30,7 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
   const [roster, setRoster] = useState<RosterStudent[]>([]);
   const [existing, setExisting] = useState<Record<string, ExistingGrade>>({});
   const [scores, setScores] = useState<Record<string, string>>({});
+  const [voiceKeys, setVoiceKeys] = useState<Set<string>>(new Set());
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
     (gr ?? []).forEach((g: any) => { ex[key(g.student_id, g.component_id)] = { id: g.id, score: Number(g.score) }; sc[key(g.student_id, g.component_id)] = String(g.score); });
     setExisting(ex);
     setScores(sc);
+    setVoiceKeys(new Set());
     setConflicts(null);
   }
 
@@ -88,7 +91,7 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
   }
 
   function collect() {
-    const news: { student_id: string; component_id: string | null; score: number }[] = [];
+    const news: { student_id: string; component_id: string | null; score: number; voice?: boolean }[] = [];
     const confs: Conflict[] = [];
     const cols: { id: string | null; name: string }[] = components.length > 0 ? components.map((c) => ({ id: c.id, name: c.component_name })) : [{ id: null, name: "العلامة" }];
     for (const s of roster) {
@@ -98,19 +101,20 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
         const num = Number(raw);
         if (Number.isNaN(num)) continue;
         const ex = existing[key(s.student_id, c.id)];
-        if (!ex) news.push({ student_id: s.student_id, component_id: c.id, score: num });
-        else if (ex.score !== num) confs.push({ student_id: s.student_id, name: s.full_name, component_id: c.id, compName: c.name, old: ex.score, new: num, resolution: "keep_old" });
+        const voice = voiceKeys.has(key(s.student_id, c.id));
+        if (!ex) news.push({ student_id: s.student_id, component_id: c.id, score: num, voice });
+        else if (ex.score !== num) confs.push({ student_id: s.student_id, name: s.full_name, component_id: c.id, compName: c.name, old: ex.score, new: num, resolution: "keep_old", voice });
       }
     }
     return { news, confs };
   }
 
-  async function submit(news: { student_id: string; component_id: string | null; score: number }[], confs: Conflict[]) {
+  async function submit(news: { student_id: string; component_id: string | null; score: number; voice?: boolean }[], confs: Conflict[]) {
     if (!exam) return;
     setBusy(true);
     const byStudent = new Map<string, any[]>();
-    news.forEach((n) => byStudent.set(n.student_id, [...(byStudent.get(n.student_id) ?? []), { component_id: n.component_id, score: n.score }]));
-    confs.forEach((c) => byStudent.set(c.student_id, [...(byStudent.get(c.student_id) ?? []), { component_id: c.component_id, score: c.new, resolution: c.resolution }]));
+    news.forEach((n) => byStudent.set(n.student_id, [...(byStudent.get(n.student_id) ?? []), { component_id: n.component_id, score: n.score, entry_method: n.voice ? "voice" : "manual" }]));
+    confs.forEach((c) => byStudent.set(c.student_id, [...(byStudent.get(c.student_id) ?? []), { component_id: c.component_id, score: c.new, resolution: c.resolution, entry_method: c.voice ? "voice" : "manual" }]));
     let applied = 0, skipped = 0;
     for (const [studentId, entries] of byStudent) {
       const { error: err } = await supabase.rpc("apply_grade_entry", { p_exam_id: exam.id, p_student_id: studentId, p_actor_id: appUser.id, p_entries: entries });
@@ -246,6 +250,16 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
           {canToggleWindow && (
             <button onClick={toggleWindow} className="btn btn-secondary" style={{ marginBottom: 14 }}><Lock size={14} /> قفل النافذة</button>
           )}
+          <VoiceEntry
+            roster={roster.map((s) => ({ id: s.student_id, name: s.full_name }))}
+            components={cols ? cols.map((c) => ({ id: c.id, name: c.component_name })) : null}
+            maxScore={Number(exam.max_score)}
+            onApply={(rows) => {
+              setScores((p) => { const n = { ...p }; rows.forEach((r) => { n[key(r.studentId, r.componentId)] = String(r.score); }); return n; });
+              setVoiceKeys((p) => { const n = new Set(p); rows.forEach((r) => n.add(key(r.studentId, r.componentId))); return n; });
+              ok(`طُبّقت ${rows.length} علامة على الجدول — راجعها ثم اضغط «حفظ العلامات»`);
+            }}
+          />
           <div className="card fade-in" style={{ overflow: "hidden", marginBottom: 14 }}>
             <table className="data-table">
               <thead>
@@ -264,7 +278,8 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
                       return (
                         <td key={k}>
                           <input type="number" className="input" style={{ width: 90, borderColor: changed ? "var(--gold-dark)" : undefined }}
-                            value={scores[k] ?? ""} onChange={(e) => setScores((p) => ({ ...p, [k]: e.target.value }))} />
+                            value={scores[k] ?? ""}
+                            onChange={(e) => { setScores((p) => ({ ...p, [k]: e.target.value })); setVoiceKeys((p) => { if (!p.has(k)) return p; const n = new Set(p); n.delete(k); return n; }); }} />
                         </td>
                       );
                     })}
