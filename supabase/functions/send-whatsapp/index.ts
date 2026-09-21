@@ -46,10 +46,15 @@ Deno.serve(async (req) => {
   const batchId = String(body.batch_id ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(batchId)) return json({ error: "batch_id غير صالح" }, 400);
 
-  // حجز الصفوف ذرّياً: كل صف يُرسل مرة واحدة حتى لو استُدعيت الدالة مرتين
+  // لا إرسال قبل المراجعة والاعتماد (مفروض أيضاً بمُشغّل في قاعدة البيانات)
+  const { data: batch } = await asUser.from("notification_batches").select("status").eq("id", batchId).maybeSingle();
+  if (!batch || batch.status !== "approved") return json({ error: "batch_not_approved" }, 409);
+
+  // حجز الصفوف ذرّياً: كل صف يُرسل مرة واحدة حتى لو استُدعيت الدالة مرتين.
+  // الرسائل المعدّلة استثنائياً (بلا قالب معتمد) لا تُرسل تلقائياً؛ تبقى للإرسال اليدوي.
   const { data: claimed, error: claimErr } = await asUser.from("notifications_log")
     .update({ claimed_at: new Date().toISOString() })
-    .eq("batch_id", batchId).eq("status", "pending").eq("channel", "whatsapp").is("claimed_at", null)
+    .eq("batch_id", batchId).eq("status", "pending").eq("channel", "whatsapp").eq("included", true).not("wa_template_name", "is", null).is("claimed_at", null)
     .select("id, to_phone, rendered_message, wa_template_name, wa_language, wa_params")
     .limit(MAX_PER_CALL);
   if (claimErr) return json({ error: claimErr.message }, 400);

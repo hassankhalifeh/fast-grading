@@ -67,3 +67,9 @@ Grading periods are configurable per school instead of hard-coded: academic year
 ## Parent notifications (file 34)
 
 Section "إشعارات أولياء الأمور" (capability `notifications.send`): choose an exam, compose a message from placeholders ({الطالب} {الولي} {المادة} {الامتحان} {العلامة} {الحد} {الصف} {المدرسة}) or a saved template, review the roster (everyone with a valid parent phone and a grade is ticked by default; untick anyone you do not want), then send. Each message is logged in `notifications_log` (batch, phone, status). Sending opens WhatsApp click-to-chat with the message prefilled, so the sender presses Send in WhatsApp; fully automatic sending requires a WhatsApp provider account and an Edge Function.
+
+## Multiple schools, school settings, message review (files 36-38)
+
+- Platform owner page `/platform` (rows in `platform_admins`) creates schools (account + first admin invite) and toggles add-ons per school (`account_features`).
+- "معلومات المدرسة" (`school_settings`): name, principal, contact, country code, report footer, approval mode.
+- Parent messages: per-school wording per message type (`notification_templates.message_type`), draft batches (`notification_batches`) that must be reviewed and approved (capability `notifications.approve`) before any send; enforced by DB triggers and the `send-whatsapp` function.

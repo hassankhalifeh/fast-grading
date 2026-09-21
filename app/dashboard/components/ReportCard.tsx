@@ -21,6 +21,7 @@ export default function ReportCard({ accountId }: { accountId: string }) {
   const [sessionId, setSessionId] = useState("");
   const [pass, setPass] = useState(50);
   const [school, setSchool] = useState("");
+  const [info, setInfo] = useState<{ principal_name: string | null; address: string | null; phone: string | null; report_footer: string | null } | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [promotion, setPromotion] = useState<{ failedBefore: number; failedAfter: number; max: number; promoted: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,9 @@ export default function ReportCard({ accountId }: { accountId: string }) {
       supabase.from("subjects").select("id, name").eq("account_id", accountId).order("name"),
       supabase.from("grading_policies").select("passing_threshold_percent").eq("account_id", accountId).maybeSingle(),
       supabase.from("accounts").select("display_name").eq("id", accountId).maybeSingle(),
-    ]).then(([c, s, t, su, gp, ac]) => {
+      supabase.from("school_settings").select("principal_name, address, phone, report_footer").eq("account_id", accountId).maybeSingle(),
+    ]).then(([c, s, t, su, gp, ac, ss]) => {
+      setInfo((ss.data as any) ?? null);
       const cl = (c.data ?? []) as Named[];
       setClasses(cl);
       setSessions((s.data ?? []) as Named[]);
@@ -117,6 +120,7 @@ export default function ReportCard({ accountId }: { accountId: string }) {
       {lines.length > 0 && (
         <div className="card" style={{ padding: "1rem 1.1rem", overflowX: "auto" }} ref={printRef}>
           {school && <h2>{school}</h2>}
+          {(info?.address || info?.phone) && <p style={{ textAlign: "center", margin: "0 0 6px", fontSize: "0.85rem" }}>{[info?.address, info?.phone].filter(Boolean).join(" — ")}</p>}
           <h3>الشهادة — {student?.name} ({cls?.name})</h3>
           <table className="data-table">
             <thead><tr><th>المادة</th>{terms.map((t) => <th key={t.id}>{t.name}</th>)}<th>معدل السنة</th>{sessionId && <th>التكميلي</th>}<th>النتيجة النهائية</th><th>الحالة</th></tr></thead>
@@ -136,6 +140,9 @@ export default function ReportCard({ accountId }: { accountId: string }) {
             </tbody>
           </table>
           <p style={{ marginTop: 10 }}>المعدل العام: <b>{fmt(avg)}</b> — حد النجاح: {pass}%</p>
+          {(info?.report_footer || info?.principal_name) && (
+            <p style={{ marginTop: 18, fontSize: "0.85rem" }}>{info?.report_footer}{info?.principal_name && <><br />المدير/ة: {info.principal_name}</>}</p>
+          )}
           {promotion && (
             <p style={{ fontWeight: 700, color: promotion.promoted ? "var(--green)" : "var(--red)" }}>
               {promotion.promoted ? "النتيجة: مُرفَّع" : "النتيجة: غير مُرفَّع"} — مواد راسب بها قبل التكميلي: {promotion.failedBefore}، بعده: {promotion.failedAfter} (المسموح: {promotion.max})

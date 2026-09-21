@@ -7,7 +7,7 @@ import { useFeatures } from "@/lib/useFeatures";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -25,11 +25,14 @@ import ExamTypeComponentsModal from "./components/ExamTypeComponentsModal";
 import GradeEntryPanel from "./components/GradeEntryPanel";
 import ReportsPanel from "./components/ReportsPanel";
 import NotificationsPanel from "./components/NotificationsPanel";
+import MessageTemplatesPanel from "./components/MessageTemplatesPanel";
+import SchoolSettingsPanel from "./components/SchoolSettingsPanel";
 
-type Section = "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 // feature = إضافة مدفوعة/اختيارية يفعّلها مالك المنصة للحساب (تظهر فقط عند تفعيلها)
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string; feature?: string }[] = [
+  { id: "school", label: "معلومات المدرسة", icon: Info, capability: "config.manage" },
   { id: "subjects", label: "المواد", icon: BookOpen, capability: "config.manage" },
   { id: "stages", label: "المراحل", icon: Layers, capability: "config.manage" },
   { id: "examTypes", label: "قوالب الاختبارات", icon: ListChecks, capability: "config.manage" },
@@ -47,7 +50,8 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string; fe
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck, capability: "users.manage" },
   { id: "supplementary", label: "الامتحان التكميلي", icon: LifeBuoy, capability: "supplementary.manage" },
   { id: "reports", label: "التقارير", icon: BarChart3, capability: "reports.view" },
-  { id: "notifications", label: "إشعارات أولياء الأمور", icon: MessageCircle, capability: "notifications.send", feature: "whatsapp_notifications" },
+  { id: "notifications", label: "مراسلات أولياء الأمور", icon: MessageCircle, capability: "notifications.send", feature: "whatsapp_notifications" },
+  { id: "messageTemplates", label: "قوالب الرسائل", icon: MessageSquare, capability: "config.manage", feature: "whatsapp_notifications" },
 ];
 
 const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[] }>> = {
@@ -72,6 +76,8 @@ export default function DashboardPage() {
   const { appUser, loading } = useAppUser();
   const capabilities = useCapabilities(appUser);
   const features = useFeatures(appUser);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  useEffect(() => { if (appUser) supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true)); }, [appUser]);
 
   const [section, setSection] = useState<Section>("subjects");
   const [rows, setRows] = useState<Record<string, any>[]>([]);
@@ -196,6 +202,9 @@ export default function DashboardPage() {
             <s.icon size={17} />{s.label}
           </button>
         ))}
+        {isPlatformAdmin && (
+          <a href="/platform" className="nav-item" style={{ textDecoration: "none", marginTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)" }}><Shield size={17} />لوحة المنصة</a>
+        )}
       </nav>
 
       <main className="fade-in" style={{ flex: 1, padding: "1.75rem", maxWidth: 1100 }}>
@@ -215,7 +224,11 @@ export default function DashboardPage() {
         )}
         {section === "import" && <ImportPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "supplementary" && <SupplementaryPanel accountId={appUser.account_id} appUser={appUser} />}
-        {section === "notifications" && features.has("whatsapp_notifications") && <NotificationsPanel accountId={appUser.account_id} appUser={appUser} />}
+        {section === "school" && <SchoolSettingsPanel accountId={appUser.account_id} appUser={appUser} showMessaging={features.has("whatsapp_notifications")} onNavigate={(id) => setSection(id as Section)} />}
+        {section === "notifications" && features.has("whatsapp_notifications") && (
+          <NotificationsPanel accountId={appUser.account_id} appUser={appUser} canApprove={capabilities.has("notifications.approve")} canSend={capabilities.has("notifications.send")} />
+        )}
+        {section === "messageTemplates" && features.has("whatsapp_notifications") && <MessageTemplatesPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "org" && <OrgStructurePanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "users" && <UsersPanel appUser={appUser} />}
         {section === "academic" && <AcademicStructurePanel accountId={appUser.account_id} />}
