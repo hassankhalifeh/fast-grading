@@ -12,7 +12,7 @@ const MAX_PER_CALL = 200;
 const CONCURRENCY = 5;
 
 // إرسال دفعة إشعارات واتساب عبر WhatsApp Cloud API.
-// المفاتيح (WHATSAPP_TOKEN, WHATSAPP_PHONE_ID) تُضبط في Supabase → Edge Functions → Secrets، ولا تمر عبر التطبيق.
+// الإرسال من رقم المدرسة نفسها: بياناتها (Phone Number ID والتوكن) في Vault وتُقرأ هنا بمفتاح الخدمة فقط.
 // كل القراءة والتحديث تتم بجلسة المستخدم نفسه (RLS)، فلا يرسل أحد إلا لطلاب حسابه وبصلاحية notifications.send.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -21,18 +21,23 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return json({ error: "غير مصرّح" }, 401);
 
-  const token = Deno.env.get("WHATSAPP_TOKEN");
-  const phoneId = Deno.env.get("WHATSAPP_PHONE_ID");
   const version = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
-  const configured = !!(token && phoneId);
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
   const asUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "جلسة غير صالحة" }, 401);
 
-  // الإضافة يفعّلها مالك المنصة لكل حساب (account_features)؛ بدونها لا شيء يعمل هنا
-  const { data: enabled } = await asUser.rpc("account_has_feature", { p_key: "whatsapp_notifications" });
-  if (!enabled) return json({ error: "feature_disabled" }, 403);
+  // الاشتراك من المنصة + عدم إيقاف المدرسة للخدمة
+  const { data: active } = await asUser.rpc("whatsapp_active");
+  if (!active) return json({ error: "feature_disabled" }, 403);
+
+  // بيانات واتساب الخاصة بالمدرسة (رقمها وحسابها) من الخزنة؛ لا تُرسل من رقم المنصة
+  const { data: accountId } = await asUser.rpc("current_account_id");
+  const { data: creds } = await admin.rpc("wa_get_credentials", { p_account: accountId });
+  const token: string | null = creds?.token ?? null;
+  const phoneId: string | null = creds?.phone_number_id ?? null;
+  const configured = !!(token && phoneId && creds?.status === "verified");
 
   const { data: canSend } = await asUser.rpc("has_capability", { p_capability: "notifications.send" });
   if (!canSend) return json({ error: "الإرسال يتطلب الصلاحية notifications.send" }, 403);

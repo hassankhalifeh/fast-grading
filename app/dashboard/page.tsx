@@ -7,7 +7,7 @@ import { useFeatures } from "@/lib/useFeatures";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -27,8 +27,9 @@ import ReportsPanel from "./components/ReportsPanel";
 import NotificationsPanel from "./components/NotificationsPanel";
 import MessageTemplatesPanel from "./components/MessageTemplatesPanel";
 import SchoolSettingsPanel from "./components/SchoolSettingsPanel";
+import WhatsAppSettingsPanel from "./components/WhatsAppSettingsPanel";
 
-type Section = "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 // feature = إضافة مدفوعة/اختيارية يفعّلها مالك المنصة للحساب (تظهر فقط عند تفعيلها)
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string; feature?: string }[] = [
@@ -50,8 +51,9 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string; fe
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck, capability: "users.manage" },
   { id: "supplementary", label: "الامتحان التكميلي", icon: LifeBuoy, capability: "supplementary.manage" },
   { id: "reports", label: "التقارير", icon: BarChart3, capability: "reports.view" },
-  { id: "notifications", label: "مراسلات أولياء الأمور", icon: MessageCircle, capability: "notifications.send", feature: "whatsapp_notifications" },
-  { id: "messageTemplates", label: "قوالب الرسائل", icon: MessageSquare, capability: "config.manage", feature: "whatsapp_notifications" },
+  { id: "notifications", label: "مراسلات أولياء الأمور", icon: MessageCircle, capability: "notifications.send", feature: "whatsapp_active" },
+  { id: "messageTemplates", label: "قوالب الرسائل", icon: MessageSquare, capability: "config.manage", feature: "whatsapp_active" },
+  { id: "whatsappSettings", label: "إعدادات واتساب", icon: Power, capability: "config.manage", feature: "whatsapp_notifications" },
 ];
 
 const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[] }>> = {
@@ -75,7 +77,7 @@ const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[
 export default function DashboardPage() {
   const { appUser, loading } = useAppUser();
   const capabilities = useCapabilities(appUser);
-  const features = useFeatures(appUser);
+  const { features, refresh: refreshFeatures } = useFeatures(appUser);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   useEffect(() => { if (appUser) supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true)); }, [appUser]);
 
@@ -225,10 +227,11 @@ export default function DashboardPage() {
         {section === "import" && <ImportPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "supplementary" && <SupplementaryPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "school" && <SchoolSettingsPanel accountId={appUser.account_id} appUser={appUser} showMessaging={features.has("whatsapp_notifications")} onNavigate={(id) => setSection(id as Section)} />}
-        {section === "notifications" && features.has("whatsapp_notifications") && (
+        {section === "whatsappSettings" && features.has("whatsapp_notifications") && <WhatsAppSettingsPanel onChanged={refreshFeatures} />}
+        {section === "notifications" && features.has("whatsapp_active") && (
           <NotificationsPanel accountId={appUser.account_id} appUser={appUser} canApprove={capabilities.has("notifications.approve")} canSend={capabilities.has("notifications.send")} />
         )}
-        {section === "messageTemplates" && features.has("whatsapp_notifications") && <MessageTemplatesPanel accountId={appUser.account_id} appUser={appUser} />}
+        {section === "messageTemplates" && features.has("whatsapp_active") && <MessageTemplatesPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "org" && <OrgStructurePanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "users" && <UsersPanel appUser={appUser} />}
         {section === "academic" && <AcademicStructurePanel accountId={appUser.account_id} />}

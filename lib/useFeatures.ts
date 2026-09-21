@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import type { AppUser } from "./types";
 
-// الميزات الإضافية المفعّلة لحساب المدرسة (account_features). التفعيل بيد مالك المنصة فقط.
-// هنا لإخفاء الواجهة؛ الإنفاذ الفعلي في قاعدة البيانات (account_has_feature) والـEdge Function.
+// الميزات الإضافية لحساب المدرسة. الاشتراك تفعّله إدارة المنصة (account_features)،
+// و"whatsapp_active" = مشترك + لم توقف المدرسة الخدمة من إعداداتها. للإخفاء في الواجهة فقط؛ الإنفاذ في قاعدة البيانات والـEdge Functions.
 export function useFeatures(appUser: AppUser | null) {
   const [features, setFeatures] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (!appUser) return;
-    supabase.from("account_features").select("feature_key").eq("account_id", appUser.account_id).eq("enabled", true)
-      .then(({ data, error }) => setFeatures(new Set(error ? [] : (data ?? []).map((f: any) => f.feature_key))));
+    const [f, active] = await Promise.all([
+      supabase.from("account_features").select("feature_key").eq("account_id", appUser.account_id).eq("enabled", true),
+      supabase.rpc("whatsapp_active"),
+    ]);
+    const set = new Set<string>(f.error ? [] : (f.data ?? []).map((x: any) => x.feature_key));
+    if (active.data === true) set.add("whatsapp_active");
+    setFeatures(set);
   }, [appUser]);
 
-  return features;
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { features, refresh };
 }

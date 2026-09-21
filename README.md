@@ -73,3 +73,7 @@ Section "إشعارات أولياء الأمور" (capability `notifications.se
 - Platform owner page `/platform` (rows in `platform_admins`) creates schools (account + first admin invite) and toggles add-ons per school (`account_features`).
 - "معلومات المدرسة" (`school_settings`): name, principal, contact, country code, report footer, approval mode.
 - Parent messages: per-school wording per message type (`notification_templates.message_type`), draft batches (`notification_batches`) that must be reviewed and approved (capability `notifications.approve`) before any send; enforced by DB triggers and the `send-whatsapp` function.
+
+## Per-school WhatsApp (file 39)
+
+Subscription (`account_features`) is set by the platform owner; each school can switch the service on/off (`account_whatsapp_config.enabled`) and enters its own WhatsApp Cloud API credentials, stored encrypted in Supabase Vault and readable only by Edge Functions (`whatsapp-admin`, `send-whatsapp`, `whatsapp-webhook?a=<account>`). No platform-level WhatsApp secrets are used.
