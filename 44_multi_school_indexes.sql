@@ -1,0 +1,19 @@
+-- 44: فهارس للمسارات الساخنة عند تعدد المدارس (كل سياسات RLS تفلتر بـ account_id) ولمفاتيح أجنبية تُستعمل في الربط والحذف المتسلسل
+create index if not exists app_users_account_idx        on public.app_users (account_id);
+create index if not exists students_account_idx         on public.students (account_id);
+create index if not exists exams_account_idx            on public.exams (account_id);
+create index if not exists exams_class_idx              on public.exams (class_section_id);
+create index if not exists exams_subject_idx            on public.exams (subject_id);
+create index if not exists exams_term_idx               on public.exams (term_id);
+create index if not exists stages_account_idx           on public.stages (account_id);
+create index if not exists terms_account_idx            on public.terms (account_id);
+create index if not exists exam_types_account_idx       on public.exam_types (account_id);
+create index if not exists grades_component_idx         on public.grades (component_id);
+create index if not exists grade_history_grade_idx      on public.grade_history (grade_id);
+create index if not exists class_subject_teachers_subject_idx on public.class_subject_teachers (subject_id);
+create index if not exists class_subject_teachers_teacher_idx on public.class_subject_teachers (teacher_id);
+create index if not exists notifications_log_batch_idx2 on public.notifications_log (batch_id);
+create index if not exists notification_batches_creator_idx on public.notification_batches (created_by);
+create index if not exists moderation_terms_account_idx on public.moderation_terms (account_id);
+create index if not exists whatsapp_messages_student_idx on public.whatsapp_messages (student_id);
+create index if not exists import_batches_account_idx   on public.import_batches (account_id);

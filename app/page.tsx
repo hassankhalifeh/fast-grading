@@ -136,6 +136,9 @@ export default function LoginPage() {
             نسيت كلمة المرور؟
           </button>
         )}
+        <p style={{ textAlign: "center", marginTop: 16, marginBottom: 0, fontSize: "0.78rem", color: "var(--steel)" }}>
+          <a href="/terms">شروط الاستخدام</a> · <a href="/privacy">سياسة الخصوصية</a>
+        </p>
       </form>
     </main>
   );
