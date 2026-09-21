@@ -30,6 +30,10 @@ Deno.serve(async (req) => {
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "جلسة غير صالحة" }, 401);
 
+  // الإضافة يفعّلها مالك المنصة لكل حساب (account_features)؛ بدونها لا شيء يعمل هنا
+  const { data: enabled } = await asUser.rpc("account_has_feature", { p_key: "whatsapp_notifications" });
+  if (!enabled) return json({ error: "feature_disabled" }, 403);
+
   const { data: canSend } = await asUser.rpc("has_capability", { p_capability: "notifications.send" });
   if (!canSend) return json({ error: "الإرسال يتطلب الصلاحية notifications.send" }, 403);
 

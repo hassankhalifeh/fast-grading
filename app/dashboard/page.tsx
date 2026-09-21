@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
 import { useCapabilities } from "@/lib/useCapabilities";
+import { useFeatures } from "@/lib/useFeatures";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
@@ -27,7 +28,8 @@ import NotificationsPanel from "./components/NotificationsPanel";
 
 type Section = "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
-const SECTIONS: { id: Section; label: string; icon: any; capability?: string }[] = [
+// feature = إضافة مدفوعة/اختيارية يفعّلها مالك المنصة للحساب (تظهر فقط عند تفعيلها)
+const SECTIONS: { id: Section; label: string; icon: any; capability?: string; feature?: string }[] = [
   { id: "subjects", label: "المواد", icon: BookOpen, capability: "config.manage" },
   { id: "stages", label: "المراحل", icon: Layers, capability: "config.manage" },
   { id: "examTypes", label: "قوالب الاختبارات", icon: ListChecks, capability: "config.manage" },
@@ -45,7 +47,7 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string }[]
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck, capability: "users.manage" },
   { id: "supplementary", label: "الامتحان التكميلي", icon: LifeBuoy, capability: "supplementary.manage" },
   { id: "reports", label: "التقارير", icon: BarChart3, capability: "reports.view" },
-  { id: "notifications", label: "إشعارات أولياء الأمور", icon: MessageCircle, capability: "notifications.send" },
+  { id: "notifications", label: "إشعارات أولياء الأمور", icon: MessageCircle, capability: "notifications.send", feature: "whatsapp_notifications" },
 ];
 
 const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[] }>> = {
@@ -69,6 +71,7 @@ const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[
 export default function DashboardPage() {
   const { appUser, loading } = useAppUser();
   const capabilities = useCapabilities(appUser);
+  const features = useFeatures(appUser);
 
   const [section, setSection] = useState<Section>("subjects");
   const [rows, setRows] = useState<Record<string, any>[]>([]);
@@ -116,7 +119,7 @@ export default function DashboardPage() {
   if (loading || capabilities === null) return <p style={{ padding: 24, color: "var(--steel)" }}>جارٍ التحميل...</p>;
   if (!appUser) return <p style={{ padding: 24, color: "var(--steel)" }}>الرجاء تسجيل الدخول.</p>;
 
-  const visibleSections = SECTIONS.filter((s) => !s.capability || capabilities.size === 0 || capabilities.has(s.capability));
+  const visibleSections = SECTIONS.filter((s) => (!s.feature || features.has(s.feature)) && (!s.capability || capabilities.size === 0 || capabilities.has(s.capability)));
 
   const FIELD_CONFIGS: Partial<Record<Section, FieldConfig[]>> = {
     subjects: [{ key: "name", label: "اسم المادة", type: "text", required: true }],
@@ -212,7 +215,7 @@ export default function DashboardPage() {
         )}
         {section === "import" && <ImportPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "supplementary" && <SupplementaryPanel accountId={appUser.account_id} appUser={appUser} />}
-        {section === "notifications" && <NotificationsPanel accountId={appUser.account_id} appUser={appUser} />}
+        {section === "notifications" && features.has("whatsapp_notifications") && <NotificationsPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "org" && <OrgStructurePanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "users" && <UsersPanel appUser={appUser} />}
         {section === "academic" && <AcademicStructurePanel accountId={appUser.account_id} />}
