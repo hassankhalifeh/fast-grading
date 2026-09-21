@@ -9,7 +9,7 @@ import { FilePlus2 } from "lucide-react";
 
 interface Named { id: string; name: string }
 interface ExamRow { id: string; exam_name: string; exam_date: string | null; max_score: number; class_section_id: string; subject_id: string; class_sections: { name: string } | null; subjects: { name: string } | null }
-interface TplRow { message_type: string; body_template: string; wa_template_name: string | null; wa_language: string; wa_status: string }
+interface TplRow { message_type: string; body_template: string; wa_template_name: string | null; wa_language: string; wa_status: string; moderation_status: string }
 interface Rec { studentId: string; name: string; phone: string; values: Record<string, string>; included: boolean }
 interface BatchRow { id: string; message_type: string; title: string; status: string; created_at: string; created_by: string }
 
@@ -54,7 +54,7 @@ export default function NotificationsPanel({ accountId, appUser, canApprove, can
       supabase.from("class_sections").select("id, name").eq("account_id", accountId).order("name"),
       supabase.from("terms").select("id, name, order_index").eq("account_id", accountId).order("order_index"),
       supabase.from("supplementary_sessions").select("id, name").eq("account_id", accountId).order("created_at", { ascending: false }),
-      supabase.from("notification_templates").select("message_type, body_template, wa_template_name, wa_language, wa_status").eq("account_id", accountId),
+      supabase.from("notification_templates").select("message_type, body_template, wa_template_name, wa_language, wa_status, moderation_status").eq("account_id", accountId),
       supabase.from("accounts").select("display_name").eq("id", accountId).maybeSingle(),
       supabase.from("school_settings").select("country_code").eq("account_id", accountId).maybeSingle(),
       supabase.from("grading_policies").select("passing_threshold_percent").eq("account_id", accountId).maybeSingle(),
@@ -163,7 +163,10 @@ export default function NotificationsPanel({ accountId, appUser, canApprove, can
     if (typeof res === "string") { setBusy(false); return setError(res); }
     if (res.recs.length === 0) { setBusy(false); return setError("لا يوجد مستلمون مؤهلون" + (res.notes.length ? ": " + res.notes.join("، ") : "")); }
 
-    const tpl = templates.find((t) => t.message_type === typeKey);
+    const found = templates.find((t) => t.message_type === typeKey);
+    // صياغة المدرسة المحجوبة (ألفاظ غير لائقة) لا تُستعمل: تُستعمل الصياغة الافتراضية حتى تُصحَّح
+    const tplBlocked = !!found && found.moderation_status === "blocked";
+    const tpl = tplBlocked ? undefined : found;
     const body = tpl?.body_template ?? type.body;
     const waOk = !!tpl && tpl.wa_status === "approved" && !!tpl.wa_template_name;
 
@@ -183,7 +186,8 @@ export default function NotificationsPanel({ accountId, appUser, canApprove, can
       return setError(friendly(e2.message));
     }
     loadBatches();
-    setInfo(res.notes.length ? res.notes.join("، ") : null);
+    const warn = tplBlocked ? "صياغة مدرستكم لهذا النوع محجوبة لاحتوائها ألفاظاً غير لائقة، فاستُعملت الصياغة الافتراضية. صحّحوها من «قوالب الرسائل». " : "";
+    setInfo(warn + (res.notes.length ? res.notes.join("، ") : "") || null);
     setOpenBatch(batch.id);
   }
 

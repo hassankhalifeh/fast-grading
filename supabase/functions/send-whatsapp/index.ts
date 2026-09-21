@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
   // الرسائل المعدّلة استثنائياً (بلا قالب معتمد) لا تُرسل تلقائياً؛ تبقى للإرسال اليدوي.
   const { data: claimed, error: claimErr } = await asUser.from("notifications_log")
     .update({ claimed_at: new Date().toISOString() })
-    .eq("batch_id", batchId).eq("status", "pending").eq("channel", "whatsapp").eq("included", true).not("wa_template_name", "is", null).is("claimed_at", null)
+    .eq("batch_id", batchId).eq("status", "pending").eq("channel", "whatsapp").eq("included", true).eq("moderation_status", "clean").not("wa_template_name", "is", null).is("claimed_at", null)
     .select("id, to_phone, rendered_message, wa_template_name, wa_language, wa_params")
     .limit(MAX_PER_CALL);
   if (claimErr) return json({ error: claimErr.message }, 400);

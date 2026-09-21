@@ -51,6 +51,46 @@ Deno.serve(async (req) => {
     });
   }
 
+  // ===== ضبط المحتوى: مخالفات كل المدارس + القاموس العام =====
+  if (body.action === "violations") {
+    const status = body.status === "all" ? null : String(body.status ?? "open");
+    let q = admin.from("message_violations").select("*").order("occurred_at", { ascending: false }).limit(300);
+    if (status) q = q.eq("review_status", status);
+    const [v, a] = await Promise.all([q, admin.from("accounts").select("id, display_name")]);
+    if (v.error) return json({ error: v.error.message }, 500);
+    const names = new Map((a.data ?? []).map((x: any) => [x.id, x.display_name]));
+    return json({ violations: (v.data ?? []).map((x: any) => ({ ...x, school: names.get(x.account_id) ?? "—" })) });
+  }
+  if (body.action === "review_violation") {
+    const st = String(body.status ?? "");
+    if (!["open", "confirmed", "dismissed"].includes(st)) return json({ error: "حالة غير صالحة" }, 400);
+    const { error } = await admin.from("message_violations").update({
+      review_status: st, reviewed_by: null, reviewed_by_name: "إدارة المنصة", reviewed_at: new Date().toISOString(), review_note: body.note ? String(body.note).slice(0, 500) : null,
+    }).eq("id", String(body.id ?? ""));
+    if (error) return json({ error: error.message }, 500);
+    return json({ ok: true });
+  }
+  if (body.action === "terms_list") {
+    const { data, error } = await admin.from("moderation_terms").select("id, term, category, kind, active").is("account_id", null).order("category").order("term");
+    if (error) return json({ error: error.message }, 500);
+    return json({ terms: data ?? [] });
+  }
+  if (body.action === "terms_add") {
+    const term = String(body.term ?? "").trim();
+    const category = String(body.category ?? "other");
+    const kind = body.kind === "allow" ? "allow" : "block";
+    if (!term) return json({ error: "المصطلح مطلوب" }, 400);
+    if (!["sexual", "profanity", "insult", "threat", "other"].includes(category)) return json({ error: "تصنيف غير صالح" }, 400);
+    const { error } = await admin.from("moderation_terms").insert({ account_id: null, term, category, kind });
+    if (error) return json({ error: error.message.includes("duplicate") ? "المصطلح موجود مسبقاً" : error.message }, 400);
+    return json({ ok: true });
+  }
+  if (body.action === "terms_remove") {
+    const { error } = await admin.from("moderation_terms").delete().eq("id", String(body.id ?? "")).is("account_id", null);
+    if (error) return json({ error: error.message }, 500);
+    return json({ ok: true });
+  }
+
   if (body.action === "set_feature") {
     const accountId = String(body.account_id ?? "");
     const key = String(body.feature_key ?? "");

@@ -6,7 +6,7 @@ import type { AppUser } from "@/lib/types";
 import { MESSAGE_TYPES, defaultWaName, render, toMetaBody, validateBody, type MessageType } from "@/lib/messageTypes";
 import { Save, RotateCcw } from "lucide-react";
 
-interface Row { id: string; message_type: string; body_template: string; wa_template_name: string | null; wa_status: string }
+interface Row { id: string; message_type: string; body_template: string; wa_template_name: string | null; wa_status: string; moderation_status: string }
 const STATUS_LABEL: Record<string, string> = { none: "لم يُقدَّم", submitted: "قُدِّم — بانتظار الاعتماد", approved: "معتمد من واتساب", rejected: "مرفوض" };
 const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 } as const;
 const SAMPLE: Record<string, string> = {
@@ -23,7 +23,7 @@ export default function MessageTemplatesPanel({ accountId, appUser }: { accountI
 
   async function load() {
     const [t, a] = await Promise.all([
-      supabase.from("notification_templates").select("id, message_type, body_template, wa_template_name, wa_status").eq("account_id", accountId).neq("message_type", "custom"),
+      supabase.from("notification_templates").select("id, message_type, body_template, wa_template_name, wa_status, moderation_status").eq("account_id", accountId).neq("message_type", "custom"),
       supabase.from("accounts").select("display_name").eq("id", accountId).maybeSingle(),
     ]);
     setRows((t.data ?? []) as Row[]);
@@ -53,6 +53,13 @@ function TypeCard({ type, row, accountId, appUser, schoolName, onDone }: {
   const [waName, setWaName] = useState(row?.wa_template_name ?? defaultWaName(type.key));
   const [waStatus, setWaStatus] = useState(row?.wa_status ?? "none");
   const [open, setOpen] = useState(false);
+  const [flags, setFlags] = useState<{ term: string; category: string }[]>([]);
+
+  // فحص فوري أثناء الكتابة (بلا تسجيل)؛ الحجب الفعلي والتسجيل عند الحفظ
+  useEffect(() => {
+    const h = setTimeout(() => { supabase.rpc("moderation_check", { p_text: body }).then(({ data }) => setFlags((data as any) ?? [])); }, 500);
+    return () => clearTimeout(h);
+  }, [body]);
 
   useEffect(() => {
     setBody(row?.body_template ?? type.body);
@@ -73,6 +80,9 @@ function TypeCard({ type, row, accountId, appUser, schoolName, onDone }: {
       ? await supabase.from("notification_templates").update(payload).eq("id", row.id)
       : await supabase.from("notification_templates").insert({ ...payload, account_id: accountId, message_type: type.key, name: type.label, created_by: appUser.id });
     if (res.error) return onDone("", res.error.message.includes("row-level security") ? "ليس لديك صلاحية تعديل القوالب" : res.error.message);
+    // قراءة حالة الحجب بعد الحفظ (المُشغّل في قاعدة البيانات هو المرجع)
+    const chk = await supabase.from("notification_templates").select("moderation_status").eq("account_id", accountId).eq("message_type", type.key).maybeSingle();
+    if (chk.data?.moderation_status === "blocked") return onDone("", `رُفضت الصياغة لاحتوائها ألفاظاً غير لائقة وسُجّلت مخالفة للمراجعة. تُستعمل الصياغة الافتراضية حتى تُصحَّح.`);
     onDone(`حُفظت صياغة «${type.label}»`, null);
   }
   async function reset() {
@@ -86,7 +96,7 @@ function TypeCard({ type, row, accountId, appUser, schoolName, onDone }: {
     <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <div>
-          <b>{type.label}</b> <span style={{ fontSize: "0.78rem", color: customized ? "var(--green)" : "var(--steel)" }}>{customized ? "صياغة المدرسة" : "الصياغة الافتراضية"}</span>
+          <b>{type.label}</b> <span style={{ fontSize: "0.78rem", color: row?.moderation_status === "blocked" ? "var(--red)" : customized ? "var(--green)" : "var(--steel)" }}>{row?.moderation_status === "blocked" ? "⛔ محجوبة (ألفاظ غير لائقة) — تُستعمل الافتراضية" : customized ? "صياغة المدرسة" : "الصياغة الافتراضية"}</span>
           <div style={{ fontSize: "0.78rem", color: "var(--steel)" }}>{type.hint}</div>
         </div>
       </div>
@@ -97,6 +107,7 @@ function TypeCard({ type, row, accountId, appUser, schoolName, onDone }: {
           <button key={k} className="btn btn-secondary" style={{ fontSize: "0.72rem", padding: "1px 6px", marginInlineEnd: 4 }} onClick={() => setBody((b) => b + `{${k}}`)}>{`{${k}}`}</button>
         ))}
       </div>
+      {flags.length > 0 && <p style={{ margin: "4px 0", fontSize: "0.82rem", color: "var(--red)", fontWeight: 700 }}>⛔ النص يحوي ألفاظاً غير لائقة ({flags.map((f) => f.term).join("، ")}): سيُحجب وتُسجَّل مخالفة عند الحفظ.</p>}
       {warnings.length > 0 && <ul style={{ margin: "4px 0", paddingInlineStart: 18, fontSize: "0.8rem", color: "var(--gold-dark)" }}>{warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
       <div style={{ background: "var(--fog)", borderRadius: 8, padding: "8px 12px", fontSize: "0.85rem", whiteSpace: "pre-wrap", maxWidth: 640 }}>
         <div style={{ fontSize: "0.72rem", color: "var(--steel)", marginBottom: 2 }}>معاينة بقيم تجريبية</div>

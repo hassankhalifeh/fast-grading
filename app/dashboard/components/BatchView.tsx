@@ -9,7 +9,7 @@ import { CheckCircle2, MessageCircle, XCircle } from "lucide-react";
 interface Batch { id: string; message_type: string; title: string; status: string; created_by: string; approved_by: string | null; approved_at: string | null; review_note: string | null; created_at: string }
 interface Msg {
   id: string; student_id: string; to_phone: string; rendered_message: string; status: string; included: boolean; edited: boolean;
-  wa_template_name: string | null; delivery_status: string | null; error_text: string | null; provider_message_id: string | null; students: { full_name: string } | null;
+  moderation_status: "clean" | "blocked"; wa_template_name: string | null; delivery_status: string | null; error_text: string | null; provider_message_id: string | null; students: { full_name: string } | null;
 }
 const STATUS: Record<string, { label: string; color: string }> = {
   draft: { label: "مسودة — بانتظار المراجعة والاعتماد", color: "var(--gold-dark)" },
@@ -46,7 +46,7 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
     const [b, m, st] = await Promise.all([
       supabase.from("notification_batches").select("*").eq("id", batchId).maybeSingle(),
       supabase.from("notifications_log")
-        .select("id, student_id, to_phone, rendered_message, status, included, edited, wa_template_name, delivery_status, error_text, provider_message_id, students(full_name)")
+        .select("id, student_id, to_phone, rendered_message, status, included, edited, moderation_status, wa_template_name, delivery_status, error_text, provider_message_id, students(full_name)")
         .eq("batch_id", batchId).order("created_at"),
       supabase.from("school_settings").select("approval_mode").eq("account_id", appUser.account_id).maybeSingle(),
     ]);
@@ -64,6 +64,7 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
 
   const who = (id: string | null) => (!id ? "—" : id === appUser.id ? "أنت" : names[id] ?? "مستخدم آخر");
   const included = msgs.filter((m) => m.included);
+  const blockedIncluded = included.filter((m) => m.moderation_status === "blocked");
   const type = batch ? typeByKey(batch.message_type) : undefined;
 
   async function toggle(m: Msg) {
@@ -143,7 +144,7 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
           <thead><tr>{isDraft && <th></th>}<th>الطالب</th><th>الهاتف</th><th>الرسالة</th><th>الحالة</th></tr></thead>
           <tbody>
             {msgs.map((m) => (
-              <tr key={m.id} style={{ opacity: m.included ? 1 : 0.45 }}>
+              <tr key={m.id} style={{ opacity: m.included ? 1 : 0.45, background: m.moderation_status === "blocked" && m.included ? "rgba(220,38,38,0.07)" : undefined }}>
                 {isDraft && <td><input type="checkbox" checked={m.included} onChange={() => toggle(m)} /></td>}
                 <td>{m.students?.full_name ?? "—"}</td>
                 <td dir="ltr" style={{ textAlign: "right" }}>+{m.to_phone}</td>
@@ -156,9 +157,10 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
                       onClick={() => { if (isDraft && m.included) { setEditing(m.id); setDraftText(m.rendered_message); } }}>{m.rendered_message}</span>
                   )}
                   {m.edited && <div style={{ color: "var(--gold-dark)", fontSize: "0.72rem" }}>معدّلة استثنائياً</div>}
+                  {m.moderation_status === "blocked" && <div style={{ color: "var(--red)", fontSize: "0.75rem", fontWeight: 700 }}>⛔ محجوبة: تحوي ألفاظاً غير لائقة (سُجّلت مخالفة) — عدّل النص أو استبعدها</div>}
                 </td>
                 <td style={{ fontSize: "0.8rem", fontWeight: 700, color: m.status === "sent" ? "var(--green)" : m.status === "failed" ? "var(--red)" : "var(--steel)" }}>
-                  {!m.included ? "مستبعدة" : m.status === "sent" ? (m.provider_message_id ? (DELIVERY[m.delivery_status ?? ""] ?? "أُرسلت") : "فُتح واتساب ✓") : m.status === "failed" ? "فشلت" : "بانتظار الإرسال"}
+                  {!m.included ? "مستبعدة" : m.moderation_status === "blocked" ? "محجوبة" : m.status === "sent" ? (m.provider_message_id ? (DELIVERY[m.delivery_status ?? ""] ?? "أُرسلت") : "فُتح واتساب ✓") : m.status === "failed" ? "فشلت" : "بانتظار الإرسال"}
                   {m.error_text && <div style={{ fontWeight: 400, color: "var(--red)" }}>{m.error_text}</div>}
                 </td>
               </tr>
@@ -169,11 +171,12 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
 
       {isDraft && (
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <button className="btn btn-gold" disabled={busy || !canApprove || selfBlocked || included.length === 0} onClick={approve}>
+          <button className="btn btn-gold" disabled={busy || !canApprove || selfBlocked || included.length === 0 || blockedIncluded.length > 0} onClick={approve}>
             <CheckCircle2 size={14} /> اعتماد {included.length} رسالة
           </button>
           <input className="input" style={{ maxWidth: 220 }} placeholder="سبب الرفض (اختياري)" value={note} onChange={(e) => setNote(e.target.value)} />
           <button className="btn btn-secondary" disabled={busy || !canApprove} onClick={() => setStatus("rejected")}><XCircle size={14} /> رفض المسودة</button>
+          {blockedIncluded.length > 0 && <span style={{ fontSize: "0.8rem", color: "var(--red)" }}>لا يمكن الاعتماد: {blockedIncluded.length} رسالة محجوبة لمحتوى غير لائق.</span>}
           {!canApprove && <span style={{ fontSize: "0.8rem", color: "var(--red)" }}>لا تملك صلاحية «اعتماد الرسائل».</span>}
           {canApprove && selfBlocked && <span style={{ fontSize: "0.8rem", color: "var(--red)" }}>إعدادات المدرسة تشترط أن يعتمدها شخص آخر غير من أعدّها.</span>}
         </div>

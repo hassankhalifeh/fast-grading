@@ -81,3 +81,7 @@ Subscription (`account_features`) is set by the platform owner; each school can 
 ## WhatsApp conversation ledger (files 40-41)
 
 `whatsapp_messages` is an append-only ledger of every outbound/inbound message with the school number used at that moment; `whatsapp_number_history` keeps every number the school has used. Rows are immutable (only delivery status changes) and cannot be deleted without an explicit owner purge; deleting an account that has a ledger is blocked. Changing the school number never rewrites history.
+
+## Message moderation (files 42-43)
+
+`moderation_terms` (global + per-school block/allow lists), `mod_scan` (Arabic-normalizing whole-word matcher), `message_violations` (append-only violation log with reviewer workflow). Triggers mark template/message rows `blocked` and log a violation without raising (so the log survives); batch approval, sending and the `send-whatsapp` function all refuse blocked rows.
