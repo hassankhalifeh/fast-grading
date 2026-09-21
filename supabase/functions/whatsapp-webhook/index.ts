@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 // استقبال حالات التسليم (sent / delivered / read / failed) من Meta لكل مدرسة على حدة.
 // عنوان كل مدرسة: .../whatsapp-webhook?a=<account_id> (تضعه المدرسة في تطبيقها لدى Meta).
 // verify_jwt = false لأن Meta لا ترسل JWT؛ الحماية: رمز التحقق الخاص بالمدرسة (GET) وتوقيع X-Hub-Signature-256 بـApp Secret المدرسة (POST).
-// التحديث محصور بحساب المدرسة نفسها فلا تتأثر رسائل مدرسة أخرى.
+// التحديث محصور بحساب المدرسة نفسها فلا تتأثر رسائل مدرسة أخرى. كل رسالة واردة/صادرة تُوثَّق في whatsapp_messages ولا تُحذف.
 
 const enc = new TextEncoder();
 function safeEqual(a: string, b: string) {
@@ -46,6 +46,15 @@ Deno.serve(async (req) => {
 
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
+      // ردود أولياء الأمور الواردة: تُوثَّق في دفتر المحادثات مع الرقم الذي وصلت إليه
+      const meta = change.value?.metadata;
+      for (const m of change.value?.messages ?? []) {
+        const text = m.type === "text" ? m.text?.body : m.type === "button" ? m.button?.text : `[${m.type}]`;
+        await admin.rpc("wa_log_inbound", {
+          p_account: accountId, p_our_phone_id: meta?.phone_number_id ?? null, p_our_display: meta?.display_phone_number ?? null, p_contact: String(m.from ?? ""),
+          p_wa_id: m.id ?? null, p_type: m.type ?? "text", p_body: text ?? null, p_at: m.timestamp ? new Date(Number(m.timestamp) * 1000).toISOString() : null,
+        });
+      }
       for (const s of change.value?.statuses ?? []) {
         const at = s.timestamp ? new Date(Number(s.timestamp) * 1000).toISOString() : new Date().toISOString();
         const patch: Record<string, unknown> = { delivery_status: s.status };
@@ -53,6 +62,7 @@ Deno.serve(async (req) => {
         if (s.status === "read") patch.read_at = at;
         if (s.status === "failed") { patch.status = "failed"; patch.error_text = String(s.errors?.[0]?.title ?? s.errors?.[0]?.message ?? "failed").slice(0, 300); }
         await admin.from("notifications_log").update(patch).eq("provider_message_id", s.id).eq("account_id", accountId);
+        await admin.rpc("wa_update_delivery", { p_account: accountId, p_wa_id: s.id, p_status: s.status, p_at: at, p_error: (patch.error_text as string) ?? null });
       }
     }
   }

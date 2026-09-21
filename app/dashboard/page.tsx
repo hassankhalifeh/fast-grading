@@ -7,7 +7,7 @@ import { useFeatures } from "@/lib/useFeatures";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -28,8 +28,9 @@ import NotificationsPanel from "./components/NotificationsPanel";
 import MessageTemplatesPanel from "./components/MessageTemplatesPanel";
 import SchoolSettingsPanel from "./components/SchoolSettingsPanel";
 import WhatsAppSettingsPanel from "./components/WhatsAppSettingsPanel";
+import WhatsAppHistoryPanel from "./components/WhatsAppHistoryPanel";
 
-type Section = "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 // feature = إضافة مدفوعة/اختيارية يفعّلها مالك المنصة للحساب (تظهر فقط عند تفعيلها)
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string; feature?: string }[] = [
@@ -54,6 +55,7 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string; fe
   { id: "notifications", label: "مراسلات أولياء الأمور", icon: MessageCircle, capability: "notifications.send", feature: "whatsapp_active" },
   { id: "messageTemplates", label: "قوالب الرسائل", icon: MessageSquare, capability: "config.manage", feature: "whatsapp_active" },
   { id: "whatsappSettings", label: "إعدادات واتساب", icon: Power, capability: "config.manage", feature: "whatsapp_notifications" },
+  { id: "whatsappHistory", label: "سجل محادثات واتساب", icon: History, capability: "notifications.send", feature: "whatsapp_history" },
 ];
 
 const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[] }>> = {
@@ -227,6 +229,7 @@ export default function DashboardPage() {
         {section === "import" && <ImportPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "supplementary" && <SupplementaryPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "school" && <SchoolSettingsPanel accountId={appUser.account_id} appUser={appUser} showMessaging={features.has("whatsapp_notifications")} onNavigate={(id) => setSection(id as Section)} />}
+        {section === "whatsappHistory" && features.has("whatsapp_history") && <WhatsAppHistoryPanel />}
         {section === "whatsappSettings" && features.has("whatsapp_notifications") && <WhatsAppSettingsPanel onChanged={refreshFeatures} />}
         {section === "notifications" && features.has("whatsapp_active") && (
           <NotificationsPanel accountId={appUser.account_id} appUser={appUser} canApprove={capabilities.has("notifications.approve")} canSend={capabilities.has("notifications.send")} />

@@ -77,3 +77,7 @@ Section "إشعارات أولياء الأمور" (capability `notifications.se
 ## Per-school WhatsApp (file 39)
 
 Subscription (`account_features`) is set by the platform owner; each school can switch the service on/off (`account_whatsapp_config.enabled`) and enters its own WhatsApp Cloud API credentials, stored encrypted in Supabase Vault and readable only by Edge Functions (`whatsapp-admin`, `send-whatsapp`, `whatsapp-webhook?a=<account>`). No platform-level WhatsApp secrets are used.
+
+## WhatsApp conversation ledger (files 40-41)
+
+`whatsapp_messages` is an append-only ledger of every outbound/inbound message with the school number used at that moment; `whatsapp_number_history` keeps every number the school has used. Rows are immutable (only delivery status changes) and cannot be deleted without an explicit owner purge; deleting an account that has a ledger is blocked. Changing the school number never rewrites history.

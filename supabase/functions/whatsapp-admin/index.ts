@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
   }
 
   const { error: storeErr } = await admin.rpc("wa_store_credentials", {
-    p_account: accountId, p_phone_id: phoneId, p_waba: waba, p_token: newToken, p_app_secret: newAppSecret, p_display: display, p_name: name,
+    p_account: accountId, p_phone_id: phoneId, p_waba: waba, p_token: newToken, p_app_secret: newAppSecret, p_display: display, p_name: name, p_actor: userData.user.id,
   });
   if (storeErr) return json({ error: "تعذّر حفظ البيانات" }, 500);
   return json({ ok: true, display_phone: display, verified_name: name });
