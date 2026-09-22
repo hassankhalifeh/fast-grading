@@ -1,0 +1,127 @@
+<title>دليل مالك المنصة</title>
+<meta name="description" content="دليل إنشاء الحسابات وضبط الحدود والاشتراكات ومراجعة المحتوى من /platform">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root{
+    --indigo:#0f1424; --indigo-ink:#080a14;
+    --accent:#8a6bf0; --accent-ink:#5f3fd1; --accent-bg:#efeaff;
+    --bg:#f5f4f8; --surface:#ffffff; --surface-2:#f7f6fb; --ink:#18171f; --ink-2:#54525f; --line:#e3e1ec;
+    --warn-bg:#fff6e6; --danger-bg:#fdeeee; --danger-ink:#a5333d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f0e14; --surface:#17161f; --surface-2:#1c1b25; --ink:#efeef6; --ink-2:#c1bed0; --line:#2c2a3a;
+      --accent:#b6a2ff; --accent-ink:#d8ceff; --accent-bg:#241d3d;
+      --warn-bg:#2a2110; --danger-bg:#2c1717;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f0e14; --surface:#17161f; --surface-2:#1c1b25; --ink:#efeef6; --ink-2:#c1bed0; --line:#2c2a3a;
+    --accent:#b6a2ff; --accent-ink:#d8ceff; --accent-bg:#241d3d;
+    --warn-bg:#2a2110; --danger-bg:#2c1717;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Tajawal',system-ui,sans-serif;margin:0;padding-block:28px;direction:rtl}
+  .wrap{max-width:900px;margin:0 auto;padding-inline:20px;display:flex;gap:28px;align-items:flex-start}
+  nav.toc{position:sticky;top:calc(20px + env(safe-area-inset-top,0px));flex:0 0 200px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13.5px;display:none}
+  @media (min-width:820px){ nav.toc{display:block} }
+  nav.toc b{display:block;color:var(--ink-2);font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+  nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:6px 0;border-inline-start:2px solid transparent;padding-inline-start:10px;margin-inline-start:-2px}
+  nav.toc a:hover{color:var(--accent-ink);border-inline-start-color:var(--accent)}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(135deg,var(--indigo),var(--indigo-ink));color:#fff;border-radius:18px;padding:28px 26px;margin-bottom:22px;position:relative;overflow:hidden;border:1px solid #2a2740}
+  header.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(420px 200px at 85% -20%,rgba(138,107,240,.45),transparent 70%)}
+  .kicker{position:relative;display:inline-flex;align-items:center;gap:8px;background:rgba(138,107,240,.18);border:1px solid rgba(182,162,255,.35);color:#d8ceff;padding:5px 12px;border-radius:99px;font-size:12.5px;font-weight:700}
+  h1{position:relative;font-size:clamp(26px,4vw,34px);margin:14px 0 6px;font-weight:900}
+  .lede{position:relative;color:#c8c6e0;font-size:15px;max-width:60ch;line-height:1.8;margin:0}
+  .url-line{position:relative;margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:#d8ceff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);display:inline-block;padding:6px 12px;border-radius:8px;direction:ltr}
+  section{margin-bottom:26px}
+  h2{font-size:19px;font-weight:900;margin:0 0 12px;padding-inline-start:12px;border-inline-start:4px solid var(--accent);color:var(--ink)}
+  h3{font-size:15px;font-weight:700;color:var(--accent-ink);margin:16px 0 8px}
+  p{line-height:1.9;color:var(--ink-2);margin:0 0 10px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  ol.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;counter-reset:step}
+  ol.steps li{display:flex;gap:12px;align-items:flex-start;line-height:1.8;color:var(--ink)}
+  ol.steps li::before{counter-increment:step;content:counter(step);flex:0 0 26px;height:26px;border-radius:8px;background:var(--accent-bg);color:var(--accent-ink);font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+  .chip{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);padding:1px 8px;border-radius:6px}
+  .callout{border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.85;border:1px solid var(--line);margin-top:14px}
+  .callout.danger{background:var(--danger-bg);border-color:#e7b3b3;color:var(--ink)}
+  .callout.danger b{color:var(--danger-ink)}
+  ul.links{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  ul.links li{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13.5px;line-height:1.7}
+  ul.links b{color:var(--accent-ink)}
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-2);font-size:12.5px;text-align:center}
+  @media print{ nav.toc{display:none} header.hero{background:var(--indigo)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="محتويات">
+    <b>المحتويات</b>
+    <a href="#create">إنشاء حساب</a>
+    <a href="#edit">تعديل حساب قائم</a>
+    <a href="#features">تفعيل الإضافات</a>
+    <a href="#moderation">مراجعة المخالفات</a>
+    <a href="#dict">القاموس العام</a>
+    <a href="#after">بعد إنشاء حساب</a>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="kicker">🔐 دليل داخلي — لك أنت فقط</span>
+      <h1>دليل مالك المنصة</h1>
+      <p class="lede">إنشاء حسابات المدارس والمعلّمين المستقلين، وضبط حدودهم واشتراكاتهم وميزاتهم، ومراجعة المحتوى عبر كل الحسابات.</p>
+      <div class="url-line">fast-grading.vercel.app/platform</div>
+    </header>
+
+    <section id="create">
+      <h2>١. إنشاء حساب جديد</h2>
+      <div class="card">
+        <ol class="steps">
+          <li><b>نوع الحساب</b>: مدرسة (<span class="chip">school_enterprise</span>) أو فردي/معلّم مستقل (<span class="chip">solo_teacher</span>).</li>
+          <li><b>الاسم</b>، <b>اسم المدير/المستخدم</b>، <b>البريد الإلكتروني</b> — يصله بريد دعوة لتعيين كلمة مروره بنفسه.</li>
+          <li><b>تنتهي الصلاحية في</b> — تاريخ اختياري؛ اتركه فارغاً لحساب بلا انتهاء.</li>
+          <li><b>الحدود المسموحة</b>: الصفوف، طلاب/صف، إجمالي الطلاب، الفروع، المراحل — عدّلها حسب الباقة المتفَق عليها.</li>
+          <li><b>تفعيل «مراسلات واتساب»</b> إن كانت الباقة تشملها (يمكن لاحقاً أيضاً).</li>
+          <li>اضغط <b>إنشاء الحساب وإرسال الدعوة</b>.</li>
+        </ol>
+      </div>
+      <div class="callout danger"><b>تنبيه:</b> هذا الزر له أثر حقيقي فوراً — يرسل بريداً إلكترونياً حقيقياً وينشئ حساباً وصلاحيات كاملة. لا تضغطه للتجربة. يحتاج أيضاً SMTP مُعَدّاً في Supabase وإلا لن يصل بريد الدعوة.</div>
+    </section>
+
+    <section id="edit">
+      <h2>٢. تعديل حساب قائم</h2>
+      <div class="card">
+        <p>زر <b>«تعديل الحدود»</b> أمام أي حساب يفتح صفاً لتعديل الحدود الخمسة، تاريخ الانتهاء، <b>الحالة</b> (نشط / موقوف يدوياً — للتعليق الفوري بلا حذف)، اسم الباقة، وملاحظة داخلية. الحفظ يُطبَّق في قاعدة البيانات فوراً.</p>
+        <p style="margin:0">عمود «الاشتراك» في الجدول يلوّن الحالة: أخضر (نشط)، أصفر (ينتهي خلال 14 يوماً)، أحمر (منتهي أو موقوف) — مع الاستعمال الحالي مقابل الحد.</p>
+      </div>
+      <div class="callout"><b>عند الانتهاء أو الإيقاف:</b> يُمنع إضافة صفوف/طلاب/فروع/مراحل جديدة، وإدخال علامات جديدة، وإرسال مراسلات واتساب جديدة — فرضاً في قاعدة البيانات نفسها. <b>لا يُمنع</b> الاطلاع على البيانات والتقارير الموجودة.</div>
+    </section>
+
+    <section id="features">
+      <h2>٣. تفعيل/إيقاف الإضافات (مثل واتساب)</h2>
+      <div class="card"><p style="margin:0">خانة الاختيار في عمود الإضافة تفعّلها فوراً. تفعيلك يعني <b>الإذن فقط</b>؛ المدرسة تُدخل بيانات رقمها وحسابها لدى Meta بنفسها، وتستطيع هي إيقاف الخدمة أو تشغيلها من جهتها طالما الإذن قائم.</p></div>
+    </section>
+
+    <section id="moderation">
+      <h2>٤. مراجعة مخالفات المحتوى (كل المدارس)</h2>
+      <div class="card"><p style="margin:0">قسم «مخالفات المحتوى» يعرض كل رسالة حُجبت في أي مدرسة لاحتوائها ألفاظاً غير لائقة، مع النص والمستخدم والمدرسة. راجعها وأكّد أو ألغِ (إنذار كاذب) مع ملاحظة.</p></div>
+    </section>
+
+    <section id="dict">
+      <h2>٥. قاموس الألفاظ العام</h2>
+      <div class="card"><p style="margin:0">القائمة الأساسية للألفاظ المحجوبة تنطبق على كل المدارس. <b>كُتبت ابتدائياً بمعرفتي وتحتاج مراجعة من شخص عربي ملمّ باللهجات المحلية</b> قبل التوسّع في البيع. لكل مدرسة أيضاً قاموسها الخاص من شاشتها.</p></div>
+    </section>
+
+    <section id="after">
+      <h2>٦. بعد إنشاء حساب مدرسة</h2>
+      <p>أرسل لعميلك رابط الدخول ودليله المناسب:</p>
+      <ul class="links">
+        <li><b>الناظر العام / مدير المدرسة</b> — دليل التهيئة الكاملة</li>
+        <li><b>الأستاذ</b> — إدخال العلامات والصوت</li>
+        <li><b>المشرفون</b> (شعبة/طابق/مرحلة/مبنى) — نطاقهم ومسؤولياتهم</li>
+      </ul>
+    </section>
+
+    <footer>Grading SaaS · دليل مالك المنصة</footer>
+  </main>
+</div>

@@ -1,0 +1,152 @@
+<title>دليل الأستاذ</title>
+<meta name="description" content="دليل عملي مختصر لإدخال العلامات والإدخال الصوتي في منصة Grading SaaS">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root{
+    --indigo:#1E2A5A; --indigo-ink:#141d42; --gold:#C9962C; --gold-ink:#8a6414;
+    --accent:#3457D5; --accent-ink:#22398f; --accent-bg:#eef1fd;
+    --bg:#f7f5ef; --surface:#ffffff; --surface-2:#faf8f2; --ink:#1c1b17; --ink-2:#54524a; --line:#e7e2d3;
+    --ok:#1f8a5a; --warn:#b3781c; --warn-bg:#fff6e6; --danger:#c23d3d; --danger-bg:#fdeeee;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#15140f; --surface:#1d1c16; --surface-2:#211f18; --ink:#f1ede1; --ink-2:#c9c3b0; --line:#332f22;
+      --accent:#8aa2ff; --accent-ink:#c3cfff; --accent-bg:#1c2440;
+      --warn-bg:#2a2110; --danger-bg:#2c1717;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#15140f; --surface:#1d1c16; --surface-2:#211f18; --ink:#f1ede1; --ink-2:#c9c3b0; --line:#332f22;
+    --accent:#8aa2ff; --accent-ink:#c3cfff; --accent-bg:#1c2440;
+    --warn-bg:#2a2110; --danger-bg:#2c1717;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Tajawal',system-ui,sans-serif;margin:0;padding-block:28px;direction:rtl}
+  .wrap{max-width:920px;margin:0 auto;padding-inline:20px;display:flex;gap:28px;align-items:flex-start}
+  nav.toc{position:sticky;top:calc(20px + env(safe-area-inset-top,0px));flex:0 0 200px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13.5px;display:none}
+  @media (min-width:820px){ nav.toc{display:block} }
+  nav.toc b{display:block;color:var(--ink-2);font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+  nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:6px 0;border-inline-start:2px solid transparent;padding-inline-start:10px;margin-inline-start:-2px}
+  nav.toc a:hover{color:var(--accent-ink);border-inline-start-color:var(--accent)}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(135deg,var(--indigo),var(--indigo-ink));color:#fff;border-radius:18px;padding:28px 26px;margin-bottom:22px;position:relative;overflow:hidden}
+  header.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(420px 200px at 85% -20%,rgba(201,150,44,.35),transparent 70%)}
+  .kicker{position:relative;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#f4e6c8;padding:5px 12px;border-radius:99px;font-size:12.5px;font-weight:700;letter-spacing:.02em}
+  h1{position:relative;font-size:clamp(26px,4vw,34px);margin:14px 0 6px;font-weight:900}
+  .lede{position:relative;color:#dfe3f5;font-size:15px;max-width:56ch;line-height:1.8;margin:0}
+  section{margin-bottom:26px}
+  h2{font-size:19px;font-weight:900;margin:0 0 12px;padding-inline-start:12px;border-inline-start:4px solid var(--gold);color:var(--ink)}
+  h3{font-size:15.5px;font-weight:700;color:var(--accent-ink);margin:18px 0 8px}
+  p{line-height:1.9;color:var(--ink-2);margin:0 0 10px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  ol.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  ol.steps li{display:flex;gap:12px;align-items:flex-start;line-height:1.8;color:var(--ink)}
+  ol.steps li::before{counter-increment:step;content:counter(step);flex:0 0 26px;height:26px;border-radius:8px;background:var(--accent-bg);color:var(--accent-ink);font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+  ol.steps{counter-reset:step}
+  ul.plain{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+  ul.plain li{line-height:1.85;color:var(--ink-2);padding-inline-start:18px;position:relative}
+  ul.plain li::before{content:"";position:absolute;right:0;top:.75em;width:6px;height:6px;border-radius:50%;background:var(--gold)}
+  .chip{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);padding:1px 8px;border-radius:6px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:right;padding:10px 12px;border-bottom:1px solid var(--line);line-height:1.7;vertical-align:top}
+  th{color:var(--ink-2);font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em}
+  .callout{border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.85;border:1px solid var(--line);margin-top:14px}
+  .callout.warn{background:var(--warn-bg);border-color:#e6c988;color:var(--ink)}
+  .callout.danger{background:var(--danger-bg);border-color:#e7b3b3;color:var(--ink)}
+  .callout b{color:var(--warn-ink,inherit)}
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-2);font-size:12.5px;text-align:center}
+  @media print{ nav.toc{display:none} header.hero{background:var(--indigo)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="محتويات">
+    <b>المحتويات</b>
+    <a href="#login">تسجيل الدخول</a>
+    <a href="#menu">القائمة</a>
+    <a href="#entry">إدخال العلامات</a>
+    <a href="#voice">الإدخال الصوتي</a>
+    <a href="#drafts">مسودة أم مؤكَّدة</a>
+    <a href="#help">لأي مشكلة أخرى</a>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="kicker">👨‍🏫 دليل الاستخدام</span>
+      <h1>دليل الأستاذ</h1>
+      <p class="lede">دورك: إدخال علامات الطلاب في المواد والشُّعب المُسنَدة إليك فقط. هذا الدليل يغطي كل ما تحتاجه من شاشة واحدة.</p>
+    </header>
+
+    <section id="login">
+      <h2>١. تسجيل الدخول</h2>
+      <div class="card">
+        <p>افتح رابط المدرسة الذي أرسلته لك الإدارة، وادخل ببريدك الإلكتروني وكلمة المرور التي عيّنتها بنفسك من رسالة الدعوة.</p>
+        <p style="margin:0">نسيت كلمة المرور؟ اضغط <span class="chip">نسيت كلمة المرور؟</span> أسفل صفحة الدخول.</p>
+      </div>
+    </section>
+
+    <section id="menu">
+      <h2>٢. ما تراه في القائمة</h2>
+      <div class="card">
+        <p>بحسب ما مُنحت من صلاحيات، تظهر لك عادة شاشتان فقط:</p>
+        <ul class="plain">
+          <li><span class="chip">إدخال العلامات</span> — شاشتك الأساسية.</li>
+          <li><span class="chip">مركز التقارير</span> — إن مُنحت صلاحية الاطلاع، لترى بطاقات علامات صفوفك.</li>
+        </ul>
+        <p style="margin-top:10px">لا تظهر لك شاشات الإعداد (المواد، المستخدمون، الصلاحيات...) لأنها ليست من مسؤوليتك.</p>
+      </div>
+    </section>
+
+    <section id="entry">
+      <h2>٣. إدخال العلامات</h2>
+      <div class="card">
+        <ol class="steps">
+          <li>من <span class="chip">إدخال العلامات</span> اختر <b>الامتحان</b> (شعبة + مادة + امتحان). لا تظهر لك إلا الامتحانات في الصفوف/المواد المُسنَدة إليك.</li>
+          <li>يظهر جدول بأسماء طلاب الشعبة. إن كان الامتحان مُدخلاً جزئياً من قبل تظهر العلامات السابقة معبّأة.</li>
+          <li>اكتب علامة كل طالب. إن كان الامتحان متعدد المكوّنات (تحريري + شفهي مثلاً) يظهر عمود لكل مكوّن.</li>
+          <li>اضغط <b>حفظ العلامات</b>.</li>
+        </ol>
+      </div>
+      <h3>لماذا قد يُرفض حفظ العلامة؟</h3>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>الرسالة</th><th>السبب</th><th>الحل</th></tr></thead>
+          <tbody>
+            <tr><td>نافذة العلامات مقفلة</td><td>الناظر العام لم يفتح نافذة الإدخال بعد (حسابات المدارس)</td><td>تواصل مع الناظر العام ليفتحها</td></tr>
+            <tr><td>الامتحان مقفل</td><td>أُقفل الامتحان بعد اعتماد نهائي</td><td>اطلب من الإدارة إعادة فتحه إن كان هناك خطأ</td></tr>
+            <tr><td>ليس لديك صلاحية</td><td>الامتحان ليس من مادتك/شعبتك</td><td>تأكد من إسنادك لهذه المادة والشعبة</td></tr>
+            <tr><td>انتهت صلاحية اشتراك المدرسة</td><td>اشتراك المدرسة في المنصة انتهى</td><td>أبلغ إدارة المدرسة لتجديده</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn"><b>تعارض العلامات:</b> إن أدخل شخص آخر علامة لنفس الطالب قبلك، تظهر نافذة تسألك: أبقِ العلامة القديمة، أو استبدلها بعلامتك. اختر بعد التأكد من الصحيح.</div>
+    </section>
+
+    <section id="voice">
+      <h2>٤. الإدخال الصوتي (اختياري)</h2>
+      <div class="card">
+        <p>إن ظهر لك زر <span class="chip">إدخال صوتي</span> أعلى شاشة إدخال العلامات:</p>
+        <ol class="steps">
+          <li>استعمل <b>Chrome أو Edge</b> فقط، واسمح للموقع باستعمال الميكروفون عند أول طلب.</li>
+          <li>اضغط الزر وقل: «اسم الطالب» ثم «العلامة» — مثال: «محمد أحمد خمسة وثمانين».</li>
+          <li>راجع جدول المسوّدة جيداً: إن كان الاسم ملتبساً تظهر أسماء مقترحة، اختر الصحيح.</li>
+          <li>اضغط <b>تطبيق</b> — هذا ينقل العلامات لجدول الإدخال فقط، ولا يحفظها بعد.</li>
+          <li>راجع الجدول ثم اضغط <b>حفظ العلامات</b> كالمعتاد.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="drafts">
+      <h2>٥. العلامات المؤكَّدة والمسودّة</h2>
+      <div class="card">
+        <p style="margin:0">بعض المدارس تفرض أن تُعتمد علامتك (تصبح «مؤكَّدة») قبل أن تدخل في حساب المعدلات والتقارير. إن كانت علامتك لا تزال «مسودّة»، راجع مع الإدارة متى تُعتمد.</p>
+      </div>
+    </section>
+
+    <section id="help">
+      <h2>لأي مشكلة أخرى</h2>
+      <div class="card"><p style="margin:0">تواصل مع إدارة مدرستك (الناظر العام أو من دعاك)، فهي من تدير حسابك وصلاحياتك.</p></div>
+    </section>
+
+    <footer>Grading SaaS · دليل الأستاذ</footer>
+  </main>
+</div>

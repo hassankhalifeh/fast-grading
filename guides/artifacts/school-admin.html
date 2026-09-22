@@ -1,0 +1,168 @@
+<title>دليل الناظر العام</title>
+<meta name="description" content="دليل تهيئة وإدارة مدرسة كاملة في Grading SaaS، للناظر العام والمعلّم المستقل">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  :root{
+    --indigo:#1E2A5A; --indigo-ink:#141d42;
+    --accent:#B07A16; --accent-ink:#8a5f10; --accent-bg:#fbf1de;
+    --bg:#f7f5ef; --surface:#ffffff; --surface-2:#faf8f2; --ink:#1c1b17; --ink-2:#54524a; --line:#e7e2d3;
+    --warn-bg:#fff6e6; --danger-bg:#fdeeee; --ok-bg:#e9f7ee; --ok-ink:#1f7a45;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#15140f; --surface:#1d1c16; --surface-2:#211f18; --ink:#f1ede1; --ink-2:#c9c3b0; --line:#332f22;
+      --accent:#e3b45c; --accent-ink:#f4d99a; --accent-bg:#332711;
+      --warn-bg:#2a2110; --danger-bg:#2c1717; --ok-bg:#12271b; --ok-ink:#7fd6a2;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#15140f; --surface:#1d1c16; --surface-2:#211f18; --ink:#f1ede1; --ink-2:#c9c3b0; --line:#332f22;
+    --accent:#e3b45c; --accent-ink:#f4d99a; --accent-bg:#332711;
+    --warn-bg:#2a2110; --danger-bg:#2c1717; --ok-bg:#12271b; --ok-ink:#7fd6a2;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Tajawal',system-ui,sans-serif;margin:0;padding-block:28px;direction:rtl}
+  .wrap{max-width:960px;margin:0 auto;padding-inline:20px;display:flex;gap:28px;align-items:flex-start}
+  nav.toc{position:sticky;top:calc(20px + env(safe-area-inset-top,0px));flex:0 0 220px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;font-size:13px;max-height:calc(100vh - 60px);overflow:auto;display:none}
+  @media (min-width:860px){ nav.toc{display:block} }
+  nav.toc b{display:block;color:var(--ink-2);font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;margin:12px 0 6px}
+  nav.toc b:first-child{margin-top:0}
+  nav.toc a{display:block;color:var(--ink-2);text-decoration:none;padding:5px 0;border-inline-start:2px solid transparent;padding-inline-start:10px;margin-inline-start:-2px}
+  nav.toc a:hover{color:var(--accent-ink);border-inline-start-color:var(--accent)}
+  main{flex:1;min-width:0}
+  header.hero{background:linear-gradient(135deg,var(--indigo),var(--indigo-ink));color:#fff;border-radius:18px;padding:28px 26px;margin-bottom:22px;position:relative;overflow:hidden}
+  header.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(420px 200px at 85% -20%,rgba(176,122,22,.45),transparent 70%)}
+  .kicker{position:relative;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#f4e6c8;padding:5px 12px;border-radius:99px;font-size:12.5px;font-weight:700}
+  h1{position:relative;font-size:clamp(26px,4vw,34px);margin:14px 0 6px;font-weight:900}
+  .lede{position:relative;color:#dfe3f5;font-size:15px;max-width:64ch;line-height:1.8;margin:0}
+  h2.stage{font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-ink);margin:34px 0 4px}
+  h2{font-size:19px;font-weight:900;margin:0 0 12px;padding-inline-start:12px;border-inline-start:4px solid var(--accent);color:var(--ink)}
+  h3{font-size:15px;font-weight:700;color:var(--accent-ink);margin:16px 0 8px}
+  p{line-height:1.9;color:var(--ink-2);margin:0 0 10px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px}
+  ol.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px;counter-reset:step}
+  ol.steps li{display:flex;gap:12px;align-items:flex-start;line-height:1.8;color:var(--ink)}
+  ol.steps li::before{counter-increment:step;content:counter(step);flex:0 0 26px;height:26px;border-radius:8px;background:var(--accent-bg);color:var(--accent-ink);font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+  ul.plain{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+  ul.plain li{line-height:1.85;color:var(--ink-2);padding-inline-start:18px;position:relative}
+  ul.plain li::before{content:"";position:absolute;right:0;top:.75em;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .chip{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);padding:1px 8px;border-radius:6px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:right;padding:10px 12px;border-bottom:1px solid var(--line);line-height:1.7;vertical-align:top}
+  th{color:var(--ink-2);font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em}
+  .callout{border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.85;border:1px solid var(--line);margin-top:6px}
+  .callout.warn{background:var(--warn-bg);border-color:#e6c988;color:var(--ink)}
+  .grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media (min-width:640px){ .grid4{grid-template-columns:repeat(3,1fr)} }
+  .grid4 div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.7}
+  .grid4 b{display:block;color:var(--accent-ink);font-size:12.5px;margin-bottom:3px}
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-2);font-size:12.5px;text-align:center}
+  @media print{ nav.toc{display:none} header.hero{background:var(--indigo)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="محتويات">
+    <b>المرحلة ١</b>
+    <a href="#setup">تهيئة المدرسة</a>
+    <b>المرحلة ٢</b>
+    <a href="#ongoing">الإدارة المستمرة</a>
+    <b>المرحلة ٣</b>
+    <a href="#reports">مركز التقارير</a>
+    <b>المرحلة ٤</b>
+    <a href="#whatsapp">مراسلات واتساب</a>
+    <b>&nbsp;</b>
+    <a href="#issues">مشاكل شائعة</a>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <span class="kicker">🏫 دليل الاستخدام</span>
+      <h1>دليل الناظر العام / مدير المدرسة</h1>
+      <p class="lede">لمن يدير حساب المدرسة بالكامل: الناظر العام (<span class="chip" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#f4e6c8">school_admin</span>)، أو المعلّم المستقل الذي يملك كل هذه الصلاحيات تلقائياً.</p>
+    </header>
+
+    <h2 class="stage">المرحلة ١</h2>
+    <section id="setup">
+      <h2>تهيئة المدرسة أول مرة</h2>
+      <p>اتبع هذا الترتيب بالضبط؛ كل خطوة تعتمد على ما قبلها.</p>
+      <div class="card">
+        <ol class="steps">
+          <li><b>معلومات المدرسة</b>: الاسم، المدير، الهاتف، العنوان، <b>رمز الدولة</b> لأرقام أولياء الأمور، وتذييل الشهادة.</li>
+          <li><b>المواد</b>: أضف كل مادة تُدرَّس.</li>
+          <li><b>المراحل</b>: المراحل الدراسية بترتيب عرضها.</li>
+          <li><b>قوالب الاختبارات</b>: بنية الامتحان (تحريري فقط، أو تحريري + شفهي...) — لكل قالب مكوّناته.</li>
+          <li><b>الهيكل الأكاديمي</b>: السنة → الفصول → بنود التقييم وأوزانها الافتراضية.</li>
+          <li><b>سياسة العلامات</b>: حد النجاح وصيغة حساب المعدل.</li>
+          <li><b>المعدلات والأوزان</b>: استثناءات لمرحلة/صف/مادة (الأكثر تحديداً يفوز).</li>
+          <li><b>الصفوف</b>: أنشئ شُعب المدرسة.</li>
+          <li><b>الطلاب</b>: يدوياً، أو بـ<b>الاستيراد الجماعي</b> من CSV لعدد كبير دفعة واحدة.</li>
+          <li><b>الهيكل التنظيمي</b> (اختياري): مبانٍ وطوابق لمدرسة متعددة المباني.</li>
+          <li><b>المستخدمون</b>: ادعُ الأساتذة والمشرفين ببريدهم ودورهم.</li>
+          <li><b>إسناد الأساتذة</b>: اربط كل أستاذ بصفه/مادته (أستاذ ثانٍ يحتاج موافقتك).</li>
+          <li><b>الصلاحيات</b>: امنح كل مستخدم ما يلزمه، وحدّد نطاق المشرفين.</li>
+          <li><b>الامتحانات</b>: أنشئ امتحاناً لكل شعبة+مادة مرتبطاً ببند تقييم.</li>
+        </ol>
+      </div>
+      <p style="margin:0">بعد هذا، الأساتذة يدخلون العلامات، والمعدلات والتقارير تُحسب تلقائياً.</p>
+    </section>
+
+    <h2 class="stage">المرحلة ٢</h2>
+    <section id="ongoing">
+      <h2>الإدارة المستمرة خلال السنة</h2>
+      <div class="card">
+        <ul class="plain">
+          <li><b>نافذة العلامات</b>: في حسابات المدارس، لا يدخل الأساتذة علامات إلا إذا فتحتَ النافذة. أقفلها بعد انتهاء فترة الإدخال.</li>
+          <li><b>قفل الامتحانات</b>: اعتمد الامتحان نهائياً بعد اكتمال علاماته؛ يمكن فتحه لاحقاً لتصحيح استثنائي.</li>
+          <li><b>حل تعارضات العلامات</b>: عند إدخال أكثر من علامة لنفس الطالب، يقرر المُدخِل (أو أنت) أيهما يبقى.</li>
+          <li><b>الامتحان التكميلي</b> (آخر السنة): حدّد المواد المتاحة، راجع الطلاب المستحقين المقترحين تلقائياً، أنشئ الامتحانات، والنتيجة والترفيع يُحسبان تلقائياً حسب سياسة الدور (استبدال / الأعلى / سقف عند حد النجاح) دون مسّ معدلات الفصول.</li>
+        </ul>
+      </div>
+    </section>
+
+    <h2 class="stage">المرحلة ٣</h2>
+    <section id="reports">
+      <h2>مركز التقارير</h2>
+      <p>شاشة واحدة بست فئات، وكل تقرير قابل للتصدير CSV:</p>
+      <div class="grid4">
+        <div><b>العلامات والمعدلات</b>بطاقة العلامات، معدلات الصف، الملخصات، الأوزان، الشهادة الفردية.</div>
+        <div><b>الشهادات</b>طباعة شهادة كل طلاب صف دفعة واحدة.</div>
+        <div><b>النتائج والتحصيل</b>النجاح والرسوب لكل مادة، التكميلي والترفيع لدور كامل.</div>
+        <div><b>متابعة العمل</b>امتحانات ناقصة، تغطية التدريس، نشاط الإدخال، سجل الاستيراد.</div>
+        <div><b>مراسلات واتساب</b>ملخص الرسائل (إن فُعّلت).</div>
+        <div><b>إدارية</b>المستخدمون وصلاحياتهم، وسجل التدقيق.</div>
+      </div>
+    </section>
+
+    <h2 class="stage">المرحلة ٤</h2>
+    <section id="whatsapp">
+      <h2>مراسلات أولياء الأمور عبر واتساب (إضافة اختيارية)</h2>
+      <p>تظهر هذه الشاشات فقط إن فعّل <b>مالك المنصة</b> الاشتراك لمدرستكم:</p>
+      <div class="card">
+        <ol class="steps">
+          <li><b>إعدادات واتساب</b>: شغّل الخدمة، وأدخل بيانات رقم واتساب مدرستكم واحفظ. بلا هذه البيانات يعمل الإرسال بفتح واتساب يدوياً برسالة جاهزة.</li>
+          <li><b>قوالب الرسائل</b>: اكتب صياغة مدرستكم لكل نوع مراسلة. أي صياغة فيها ألفاظ خادشة للحياء تُرفض تلقائياً وتُسجَّل مخالفة.</li>
+          <li><b>مراسلات أولياء الأمور</b>: اختر النوع والمصدر ← مسودة يُحدَّد فيها الجميع افتراضياً ← راجع وألغِ وعدّل ← اعتماد ← إرسال.</li>
+          <li><b>سجل محادثات واتساب</b>: أرشيف دائم لكل رسالة، حتى بعد تغيير رقم المدرسة.</li>
+          <li><b>مراجعة المخالفات</b>: راجع أي رسالة حُجبت، أكّدها أو ألغِها، ووسِّع قاموس مدرستكم الخاص.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="issues">
+      <h2>مشاكل شائعة</h2>
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
+        <table>
+          <thead><tr><th>الرسالة</th><th>السبب</th></tr></thead>
+          <tbody>
+            <tr><td>انتهت صلاحية اشتراك المدرسة</td><td>راجع تاريخ الاشتراك مع مالك المنصة لتجديده</td></tr>
+            <tr><td>بلغ عدد الصفوف/الطلاب/الفروع/المراحل الحد المسموح</td><td>حسابك بلغ حده؛ تواصل مع مالك المنصة لزيادته</td></tr>
+            <tr><td>محتوى غير لائق: لا يمكن إرسال هذه الرسالة</td><td>عدّل النص المحجوب من قوالب الرسائل أو المسودة</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:12px">للاستفسار عن حدود حسابك أو تفعيل ميزة جديدة، تواصل مع مالك المنصة.</p>
+    </section>
+
+    <footer>Grading SaaS · دليل الناظر العام</footer>
+  </main>
+</div>

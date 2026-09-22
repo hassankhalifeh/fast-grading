@@ -65,3 +65,16 @@ on conflict (account_id, feature_key) do update set enabled = true;
 ## تحقّق من نطاق التقارير (2026-09-22)
 
 تقارير العلامات (بطاقة العلامات، معدلات الصف، الشهادات، النجاح/الرسوب، نشاط الإدخال) مقيّدة فعلاً في قاعدة البيانات: كل مستخدم يرى فقط ما يخص صفوفه/مواده المُسنَدة إليه أو ما مُنح له صراحة. بيانات الجدول الأساسي (الطلاب، الصفوف، التسجيلات، إسناد الأساتذة) تبقى مرئية لأي مستخدم في المدرسة نفسها (بنية قديمة يعتمد عليها عرض الأسماء في شاشات كثيرة). تقريرا «المستخدمون» و«سجل التدقيق» كانا يعتمدان على إخفاء الواجهة فقط؛ أُغلقا الآن في قاعدة البيانات نفسها (ترحيل 47): سجل التدقيق يتطلب config.manage أو users.manage أو notifications.approve، وقراءة صلاحيات مستخدم آخر تتطلب users.manage.
+
+## أدلة المستخدمين النهائيين (بحسب الدور)
+
+ملفات في `guides/` (نسخة توثيقية)، ومنشورة أيضاً كصفحات ويب جاهزة للمشاركة والطباعة:
+
+| الدور | ملف Markdown | صفحة الويب |
+|---|---|---|
+| الأستاذ | `guides/TEACHER_GUIDE_AR.md` | https://claude.ai/artifact/Rs7ru4miFeeMRweWuabFvf |
+| المشرفون (شعبة/طابق/مرحلة/مبنى) | `guides/SUPERVISOR_GUIDE_AR.md` | https://claude.ai/artifact/BprawBTCPGkFpWXRvjvrQi |
+| الناظر العام / مدير المدرسة | `guides/SCHOOL_ADMIN_GUIDE_AR.md` | https://claude.ai/artifact/4Q3HregTxKdDGkgnSqw12R |
+| مالك المنصة (لك وحدك) | `guides/PLATFORM_OWNER_GUIDE_AR.md` | https://claude.ai/artifact/7GWPuHpbX9niw5rKep1yg7 |
+
+صفحات الويب خاصة (private) ولا يفتحها إلا من شاركتها معه من قائمة Share في الصفحة نفسها.
