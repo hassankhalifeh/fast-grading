@@ -234,20 +234,24 @@ export function ImportBatchesReport({ accountId }: { accountId: string }) {
 }
 
 // ============================================================ 6) المستخدمون والصلاحيات
+// يقرأ عبر list_account_users() الموجودة أصلاً (SECURITY DEFINER تتحقق من users.manage بنفسها)،
+// بدل قراءة app_users مباشرة، حتى لا يعتمد إظهار البيانات الحساسة على إخفاء الواجهة فقط.
 const ROLE_LABEL: Record<string, string> = { solo_teacher: "معلّم مستقل", school_admin: "ناظر عام", assistant_admin: "مساعد إداري", subject_teacher: "أستاذ مادة", custom_role: "دور مخصّص" };
 export function UsersReport({ accountId }: { accountId: string }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [denied, setDenied] = useState(false);
   useEffect(() => {
     (async () => {
       setLoading(true);
       const [users, caps] = await Promise.all([
-        supabase.from("app_users").select("id, full_name, email, role, is_active, created_at").eq("account_id", accountId).order("full_name"),
+        supabase.rpc("list_account_users"),
         supabase.from("user_capabilities").select("app_user_id, granted"),
       ]);
+      if (users.error) { setDenied(true); setLoading(false); return; }
       const capCount = new Map<string, number>();
       (caps.data ?? []).forEach((c: any) => { if (c.granted) capCount.set(c.app_user_id, (capCount.get(c.app_user_id) ?? 0) + 1); });
-      setRows((users.data ?? []).map((u: any) => ({ ...u, caps: capCount.get(u.id) ?? 0 })));
+      setRows(((users.data ?? []) as any[]).map((u) => ({ ...u, caps: capCount.get(u.id) ?? 0 })));
       setLoading(false);
     })();
   }, [accountId]);
@@ -255,7 +259,7 @@ export function UsersReport({ accountId }: { accountId: string }) {
     <div>
       <p style={{ fontSize: "0.85rem", color: "var(--steel)", marginTop: 0 }}>كل المستخدمين، أدوارهم، حالتهم، وعدد الصلاحيات العامة الممنوحة لكل منهم.</p>
       <Toolbar onExport={() => downloadCsv("users.csv", [["الاسم", "البريد", "الدور", "الحالة", "عدد الصلاحيات", "أُنشئ"], ...rows.map((r) => [r.full_name, r.email ?? "", ROLE_LABEL[r.role] ?? r.role, r.is_active ? "نشط" : "موقوف", r.caps, r.created_at])])} disabled={rows.length === 0} />
-      {loading ? <p style={{ color: "var(--steel)" }}>جارٍ التحميل...</p> : (
+      {denied ? <p style={{ color: "var(--red)" }}>هذا التقرير يتطلب صلاحية إدارة المستخدمين.</p> : loading ? <p style={{ color: "var(--steel)" }}>جارٍ التحميل...</p> : (
         <SimpleTable columns={[{ key: "full_name", label: "الاسم" }, { key: "email", label: "البريد" }, { key: "role", label: "الدور" }, { key: "status", label: "الحالة" }, { key: "caps", label: "عدد الصلاحيات" }]}
           rows={rows.map((r) => ({ full_name: r.full_name, email: r.email ?? "—", role: ROLE_LABEL[r.role] ?? r.role, status: r.is_active ? "نشط" : "موقوف", caps: r.caps }))} />
       )}
