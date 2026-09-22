@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
 import { useCapabilities } from "@/lib/useCapabilities";
 import { useFeatures } from "@/lib/useFeatures";
+import { useSubscriptionStatus } from "@/lib/useSubscriptionStatus";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
@@ -23,7 +24,7 @@ import SupplementaryPanel from "./components/SupplementaryPanel";
 import PermissionsMatrix from "./components/PermissionsMatrix";
 import ExamTypeComponentsModal from "./components/ExamTypeComponentsModal";
 import GradeEntryPanel from "./components/GradeEntryPanel";
-import ReportsPanel from "./components/ReportsPanel";
+import ReportsHub from "./components/ReportsHub";
 import NotificationsPanel from "./components/NotificationsPanel";
 import MessageTemplatesPanel from "./components/MessageTemplatesPanel";
 import SchoolSettingsPanel from "./components/SchoolSettingsPanel";
@@ -52,7 +53,7 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string; fe
   { id: "users", label: "المستخدمون", icon: UserPlus, capability: "users.manage" },
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck, capability: "users.manage" },
   { id: "supplementary", label: "الامتحان التكميلي", icon: LifeBuoy, capability: "supplementary.manage" },
-  { id: "reports", label: "التقارير", icon: BarChart3, capability: "reports.view" },
+  { id: "reports", label: "مركز التقارير", icon: BarChart3, capability: "reports.view" },
   { id: "notifications", label: "مراسلات أولياء الأمور", icon: MessageCircle, capability: "notifications.send", feature: "whatsapp_active" },
   { id: "messageTemplates", label: "قوالب الرسائل", icon: MessageSquare, capability: "config.manage", feature: "whatsapp_active" },
   { id: "whatsappSettings", label: "إعدادات واتساب", icon: Power, capability: "config.manage", feature: "whatsapp_notifications" },
@@ -82,6 +83,7 @@ export default function DashboardPage() {
   const { appUser, loading } = useAppUser();
   const capabilities = useCapabilities(appUser);
   const { features, refresh: refreshFeatures } = useFeatures(appUser);
+  const sub = useSubscriptionStatus(appUser);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   useEffect(() => { if (appUser) supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true)); }, [appUser]);
 
@@ -214,6 +216,17 @@ export default function DashboardPage() {
       </nav>
 
       <main className="fade-in" style={{ flex: 1, padding: "1.75rem", maxWidth: 1100 }}>
+        {sub && (sub.status === "suspended" || (sub.days_left !== null && sub.days_left <= 14)) && (
+          <div style={{
+            background: sub.status === "suspended" || (sub.days_left ?? 99) < 0 ? "#fde8e8" : "#fff6e0",
+            color: sub.status === "suspended" || (sub.days_left ?? 99) < 0 ? "var(--red)" : "var(--gold-dark)",
+            border: "1px solid currentColor", borderRadius: 10, padding: "8px 14px", marginBottom: 14, fontSize: "0.85rem", fontWeight: 700,
+          }}>
+            {sub.status === "suspended" ? "اشتراك المدرسة موقوف — تواصلوا مع إدارة المنصة لتجديده."
+              : (sub.days_left ?? 0) < 0 ? "انتهت صلاحية اشتراك المدرسة — بعض العمليات (إضافة صفوف/طلاب، إدخال علامات جديدة، مراسلات واتساب) متوقفة حتى التجديد."
+              : `اشتراك المدرسة ينتهي خلال ${sub.days_left} يوماً (${sub.expires_at ? new Date(sub.expires_at).toLocaleDateString("ar") : ""}) — تواصلوا مع إدارة المنصة للتجديد.`}
+          </div>
+        )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <h2 style={{ fontSize: "1.3rem", margin: 0, color: "var(--indigo)" }}>
             {SECTIONS.find((s) => s.id === section)?.label}
@@ -248,7 +261,7 @@ export default function DashboardPage() {
             <ScopesPanel accountId={appUser.account_id} appUser={appUser} />
           </>
         )}
-        {section === "reports" && <ReportsPanel accountId={appUser.account_id} />}
+        {section === "reports" && <ReportsHub accountId={appUser.account_id} capabilities={capabilities} features={features} />}
         {section === "gradeEntry" && (
           <GradeEntryPanel accountId={appUser.account_id} appUser={appUser} canToggleWindow={capabilities.has("window.toggle")}
             canFinalize={capabilities.has("grades.finalize_submission")} canEditOthers={capabilities.has("grades.edit_others")} />

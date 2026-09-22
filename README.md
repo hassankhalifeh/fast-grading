@@ -85,3 +85,11 @@ Subscription (`account_features`) is set by the platform owner; each school can 
 ## Message moderation (files 42-43)
 
 `moderation_terms` (global + per-school block/allow lists), `mod_scan` (Arabic-normalizing whole-word matcher), `message_violations` (append-only violation log with reviewer workflow). Triggers mark template/message rows `blocked` and log a violation without raising (so the log survives); batch approval, sending and the `send-whatsapp` function all refuse blocked rows.
+
+## Platform account limits & expiry (files 45-46)
+
+Every account gets a `subscription_profiles` row (auto-created by the accounts trigger): max classes, max students per class, max total students, max buildings, max stages, an optional `expires_at`, and `status` (active/suspended). Enforced by triggers on class_sections/class_enrollments/buildings/stages/grades insert and on notification_batches insert. `/platform` lets the owner set an account type (solo_teacher/school_enterprise), limits and expiry at creation or later, and shows usage vs limits per account. The dashboard shows a banner when a school subscription is expiring soon or expired. Bug caught by testing: the two original solo-teacher limit triggers were plain SECURITY INVOKER, so their `SELECT ... FOR UPDATE` on subscription_profiles silently failed to lock under RLS and limits were not actually enforced; fixed by making all limit-enforcement trigger functions SECURITY DEFINER (46).
+
+## Reports hub (new "reports" section)
+
+"مركز التقارير" replaces the old single reports screen: a category picker plus 11 reports built from existing data (no new tables) — grades/averages/certificate (existing), bulk class certificates, pass/fail per subject, supplementary+promotion for a whole session, pending-grade exams, teaching coverage, grade-entry activity per user, import batches, WhatsApp message summary, users & capabilities, and the audit log. Each has filters, a table, and CSV export.
