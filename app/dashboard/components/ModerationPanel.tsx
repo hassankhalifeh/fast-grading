@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Trash2 } from "lucide-react";
+import { useTableKit } from "@/lib/tablekit";
 
 interface Violation {
   id: string; occurred_at: string; user_id: string | null; user_name: string | null; context: string; message_type: string | null; student_name: string | null;
@@ -42,6 +43,9 @@ export default function ModerationPanel() {
   useEffect(() => { load(); }, []);
 
   const shown = list.filter((v) => filter === "all" || v.review_status === "open");
+  const tk = useTableKit(shown, [{ key: "user_name", label: "المستخدم" }, { key: "context", label: "السياق" }, { key: "student_name", label: "الطالب" }, { key: "terms", label: "الألفاظ" }, { key: "excerpt", label: "النص" }, { key: "review_status", label: "الحالة" }], {
+    getText: (v, k) => (k === "context" ? CONTEXT_LABEL[v.context] ?? v.context : k === "terms" ? v.matched_terms.join(" ") : k === "review_status" ? STATUS_LABEL[v.review_status] : String((v as any)[k] ?? "")),
+  });
   const perUser = useMemo(() => {
     const m = new Map<string, { name: string; total: number; confirmed: number }>();
     list.forEach((v) => {
@@ -95,11 +99,13 @@ export default function ModerationPanel() {
       </div>
 
       {shown.length === 0 ? <p style={{ color: "var(--steel)" }}>لا توجد مخالفات {filter === "open" ? "بانتظار المراجعة" : "مسجّلة"}.</p> : (
+        <>
+        {tk.toolbar}
         <div className="card" style={{ overflowX: "auto", marginBottom: 18 }}>
           <table className="data-table">
             <thead><tr><th>الوقت</th><th>المستخدم</th><th>السياق</th><th>الطالب</th><th>التصنيف / الألفاظ</th><th>النص</th><th>الحالة</th><th>المراجعة</th></tr></thead>
             <tbody>
-              {shown.map((v) => (
+              {tk.rows.map((v) => (
                 <tr key={v.id}>
                   <td style={{ fontSize: "0.78rem" }}>{fmtDT(v.occurred_at)}</td>
                   <td>{v.user_name ?? "—"}</td>
@@ -124,6 +130,7 @@ export default function ModerationPanel() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <div className="card" style={{ padding: "1rem 1.1rem" }}>

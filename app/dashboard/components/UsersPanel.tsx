@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { AppUser, UserRole } from "@/lib/types";
+import { useTableKit } from "@/lib/tablekit";
 
 interface Row {
   id: string; full_name: string; email: string | null; phone: string | null; role: UserRole;
@@ -83,6 +84,9 @@ export default function UsersPanel({ appUser }: { appUser: AppUser }) {
     !r.is_active ? { text: "معطّل", color: "var(--red)" }
     : !r.accepted ? { text: "بانتظار قبول الدعوة", color: "var(--gold-dark)" }
     : { text: "نشط", color: "var(--green)" };
+  const tk = useTableKit(rows, [{ key: "full_name", label: "الاسم" }, { key: "email", label: "البريد" }, { key: "role", label: "الدور" }, { key: "state", label: "الحالة" }], {
+    getText: (r, k) => (k === "role" ? ROLE_LABEL[r.role] : k === "state" ? status(r).text : String((r as any)[k] ?? "")),
+  });
 
   return (
     <div className="fade-in">
@@ -104,11 +108,12 @@ export default function UsersPanel({ appUser }: { appUser: AppUser }) {
         <button type="submit" disabled={sending || roleOptions.length === 0} className="btn btn-gold">{sending ? "جارٍ الإرسال..." : "إرسال الدعوة"}</button>
       </form>
 
+      {tk.toolbar}
       <div className="card" style={{ overflowX: "auto" }}>
         <table className="data-table">
           <thead><tr><th>الاسم</th><th>البريد</th><th>الدور</th><th>الحالة</th><th>آخر دخول</th><th></th></tr></thead>
           <tbody>
-            {rows.map((r) => {
+            {tk.rows.map((r) => {
               const st = status(r);
               const canEdit = r.id !== appUser.id && RANK[r.role] < RANK[appUser.role];
               return (

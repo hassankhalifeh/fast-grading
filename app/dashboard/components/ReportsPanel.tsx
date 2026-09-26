@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import SimpleTable from "./SimpleTable";
+import { useTableKit } from "@/lib/tablekit";
 import ReportCard from "./ReportCard";
 
 interface Named { id: string; name: string }
@@ -11,6 +12,26 @@ type Tab = "final" | "card" | "class" | "summary" | "weights";
 const SOURCE_LABEL: Record<string, string> = {
   default: "افتراضي", school: "المدرسة", stage: "المرحلة", class: "الصف", subject: "المادة", class_subject: "صف + مادة",
 };
+// جدول معدلات الصف (أعمدة ديناميكية حسب المواد): بحث وفلترة بالأعمدة نفسها
+function ClassTable({ head, rows }: { head: string[]; rows: (string | number)[][] }) {
+  const cols = head.map((h, i) => ({ key: String(i), label: h }));
+  const tk = useTableKit(rows, cols, { getText: (r, k) => String(r[Number(k)] ?? "") });
+  return (
+    <>
+      {tk.toolbar}
+      <div className="card" style={{ overflowX: "auto" }}>
+        <table className="data-table">
+          <thead><tr>{head.map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
+          <tbody>
+            {tk.rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} style={j === 0 ? { fontWeight: 700 } : undefined}>{c}</td>)}</tr>)}
+            {tk.active && tk.rows.length === 0 && <tr><td colSpan={head.length} style={{ textAlign: "center", color: "var(--steel)" }}>لا نتائج مطابقة للبحث.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 } as const;
 const fmt = (n: number | null | undefined) => (n === null || n === undefined ? "—" : String(Math.round(Number(n) * 10) / 10));
 
@@ -172,12 +193,7 @@ export default function ReportsPanel({ accountId }: { accountId: string }) {
             <p style={{ fontSize: "0.8rem", color: "var(--gold-dark)", marginBottom: 8 }}>⚠ المعدل مؤقت: بعض بنود التقييم لم تُدخَل/تُعتمد علاماتها بعد، والمعدل محسوب على الموجود فقط.</p>
           )}
           {classTable && classTable.rows.length > 0 ? (
-            <div className="card" style={{ overflowX: "auto" }}>
-              <table className="data-table">
-                <thead><tr>{classTable.head.map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
-                <tbody>{classTable.rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} style={j === 0 ? { fontWeight: 700 } : undefined}>{c}</td>)}</tr>)}</tbody>
-              </table>
-            </div>
+            <ClassTable head={classTable.head} rows={classTable.rows} />
           ) : !loading && <p style={{ color: "var(--steel)" }}>لا توجد معدلات بعد — تظهر بعد إدخال علامات مؤكَّدة لامتحانات مرتبطة ببنود التقييم.</p>}
         </>
       )}
