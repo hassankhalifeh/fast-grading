@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import type { AppUser } from "@/lib/types";
 import { typeByKey } from "@/lib/messageTypes";
 import { CheckCircle2, MessageCircle, XCircle } from "lucide-react";
+import { useTableKit } from "@/lib/tablekit";
 
 interface Batch { id: string; message_type: string; title: string; status: string; created_by: string; approved_by: string | null; approved_at: string | null; review_note: string | null; created_at: string }
 interface Msg {
@@ -18,6 +19,9 @@ const STATUS: Record<string, { label: string; color: string }> = {
   cancelled: { label: "ملغاة", color: "var(--red)" },
 };
 const DELIVERY: Record<string, string> = { accepted: "قُبلت لدى واتساب", delivered: "سُلّمت", read: "قُرئت", failed: "فشلت" };
+const MSG_COLUMNS = [{ key: "student", label: "الطالب" }, { key: "phone", label: "الهاتف" }, { key: "rendered_message", label: "الرسالة" }, { key: "status_text", label: "الحالة" }];
+const msgStatusText = (m: Msg) =>
+  !m.included ? "مستبعدة" : m.moderation_status === "blocked" ? "محجوبة" : m.status === "sent" ? (m.provider_message_id ? (DELIVERY[m.delivery_status ?? ""] ?? "أُرسلت") : "فُتح واتساب ✓") : m.status === "failed" ? "فشلت" : "بانتظار الإرسال";
 
 function friendly(m: string) {
   if (m.includes("row-level security")) return "ليس لديك صلاحية لهذا الإجراء";
@@ -117,6 +121,8 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
     load();
   }
   const nextManual = manualRows.find((m) => m.status === "pending") ?? null;
+  const msgRows = useMemo(() => msgs.map((m) => ({ ...m, student: m.students?.full_name ?? "—", phone: `+${m.to_phone}`, status_text: msgStatusText(m) })), [msgs]);
+  const tk = useTableKit(msgRows, MSG_COLUMNS);
 
   if (!batch) return <p style={{ color: "var(--steel)" }}>جارٍ التحميل...</p>;
   const st = STATUS[batch.status] ?? { label: batch.status, color: "var(--steel)" };
@@ -139,11 +145,12 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
         </p>
       )}
 
+      {tk.toolbar}
       <div className="card" style={{ overflowX: "auto", marginBottom: 12 }}>
         <table className="data-table">
           <thead><tr>{isDraft && <th></th>}<th>الطالب</th><th>الهاتف</th><th>الرسالة</th><th>الحالة</th></tr></thead>
           <tbody>
-            {msgs.map((m) => (
+            {tk.rows.map((m) => (
               <tr key={m.id} style={{ opacity: m.included ? 1 : 0.45, background: m.moderation_status === "blocked" && m.included ? "rgba(220,38,38,0.07)" : undefined }}>
                 {isDraft && <td><input type="checkbox" checked={m.included} onChange={() => toggle(m)} /></td>}
                 <td>{m.students?.full_name ?? "—"}</td>
@@ -160,7 +167,7 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
                   {m.moderation_status === "blocked" && <div style={{ color: "var(--red)", fontSize: "0.75rem", fontWeight: 700 }}>⛔ محجوبة: تحوي ألفاظاً غير لائقة (سُجّلت مخالفة) — عدّل النص أو استبعدها</div>}
                 </td>
                 <td style={{ fontSize: "0.8rem", fontWeight: 700, color: m.status === "sent" ? "var(--green)" : m.status === "failed" ? "var(--red)" : "var(--steel)" }}>
-                  {!m.included ? "مستبعدة" : m.moderation_status === "blocked" ? "محجوبة" : m.status === "sent" ? (m.provider_message_id ? (DELIVERY[m.delivery_status ?? ""] ?? "أُرسلت") : "فُتح واتساب ✓") : m.status === "failed" ? "فشلت" : "بانتظار الإرسال"}
+                  {m.status_text}
                   {m.error_text && <div style={{ fontWeight: 400, color: "var(--red)" }}>{m.error_text}</div>}
                 </td>
               </tr>

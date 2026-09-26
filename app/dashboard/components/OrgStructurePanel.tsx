@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { AppUser } from "@/lib/types";
 import { Trash2 } from "lucide-react";
+import { useTableKit } from "@/lib/tablekit";
+
+const OVERVIEW_COLUMNS = [{ key: "class_name", label: "الشعبة" }, { key: "stage_name", label: "المرحلة" }, { key: "location", label: "الموقع" }, { key: "class_sup", label: "ناظر الصف" }, { key: "authority", label: "المسؤول فعلياً" }, { key: "assistants_count", label: "مساعدون" }, { key: "subjects_without_teacher", label: "مواد بلا أستاذ" }];
+const CLASSES_COLUMNS = [{ key: "name", label: "الشعبة" }];
 
 type Level = "class" | "floor" | "stage" | "building";
 interface Named { id: string; name: string }
@@ -91,6 +95,14 @@ export default function OrgStructurePanel({ accountId, appUser }: { accountId: s
   const fail = (m: string) => { setMessage(null); setError(friendly(m)); };
   const ok = (m: string) => { setError(null); setMessage(m); };
   const uname = (id: string | null) => users.find((u) => u.id === id)?.name ?? "—";
+  // صفوف النظرة العامة بنصوصها الظاهرة (أسماء لا معرّفات) ليعمل عليها البحث والفلترة
+  const overviewRows = useMemo(() => overview.map((o) => ({
+    ...o, stage_name: o.stage_name ?? "—", location: [o.building_name, o.floor_name].filter(Boolean).join(" / ") || "—",
+    class_sup: o.class_supervisor ? uname(o.class_supervisor) : "غير معيّن",
+    authority: o.authority_level ? `${uname(o.authority_user)} (${AUTH_LABEL[o.authority_level] ?? o.authority_level})` : "—",
+  })), [overview, users]);
+  const overviewTk = useTableKit(overviewRows, OVERVIEW_COLUMNS);
+  const classesTk = useTableKit(classes, CLASSES_COLUMNS);
   const eligible = users.filter((u) => u.is_active && u.role !== "solo_teacher" && u.role !== "school_admin");
 
   const targetOptions: Named[] =
@@ -189,18 +201,19 @@ export default function OrgStructurePanel({ accountId, appUser }: { accountId: s
       {error && <p style={{ color: "var(--red)", fontSize: "0.85rem", marginBottom: 10 }}>{error}</p>}
       {message && <p style={{ color: "var(--green)", fontSize: "0.85rem", marginBottom: 10 }}>{message}</p>}
 
+      {tab === "overview" && overviewTk.toolbar}
       {tab === "overview" && (
         <div className="card" style={{ overflowX: "auto" }}>
           <table className="data-table">
             <thead><tr><th>الشعبة</th><th>المرحلة</th><th>الموقع</th><th>ناظر الصف</th><th>المسؤول فعلياً</th><th>مساعدون</th><th>مواد بلا أستاذ</th></tr></thead>
             <tbody>
-              {overview.map((o) => (
+              {overviewTk.rows.map((o) => (
                 <tr key={o.class_id}>
                   <td style={{ fontWeight: 700 }}>{o.class_name}</td>
-                  <td>{o.stage_name ?? "—"}</td>
-                  <td>{[o.building_name, o.floor_name].filter(Boolean).join(" / ") || "—"}</td>
-                  <td>{o.class_supervisor ? uname(o.class_supervisor) : <span style={{ color: "var(--red)" }}>غير معيّن</span>}</td>
-                  <td>{o.authority_level ? `${uname(o.authority_user)} (${AUTH_LABEL[o.authority_level] ?? o.authority_level})` : "—"}</td>
+                  <td>{o.stage_name}</td>
+                  <td>{o.location}</td>
+                  <td>{o.class_supervisor ? o.class_sup : <span style={{ color: "var(--red)" }}>غير معيّن</span>}</td>
+                  <td>{o.authority}</td>
                   <td>{o.assistants_count}</td>
                   <td style={{ color: o.subjects_without_teacher > 0 ? "var(--red)" : undefined, fontWeight: 700 }}>{o.subjects_without_teacher}</td>
                 </tr>
@@ -245,11 +258,12 @@ export default function OrgStructurePanel({ accountId, appUser }: { accountId: s
               ))}
             </form>
           </div>
+          {classesTk.toolbar}
           <div className="card" style={{ overflowX: "auto" }}>
             <table className="data-table">
               <thead><tr><th>الشعبة</th><th>الطابق</th></tr></thead>
               <tbody>
-                {classes.map((c) => (
+                {classesTk.rows.map((c) => (
                   <tr key={c.id}>
                     <td style={{ fontWeight: 700 }}>{c.name}</td>
                     <td>

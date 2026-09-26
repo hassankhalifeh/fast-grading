@@ -5,6 +5,9 @@ import { supabase } from "@/lib/supabaseClient";
 import type { AppUser, Exam, ExamTypeComponent } from "@/lib/types";
 import { Lock, Unlock } from "lucide-react";
 import VoiceEntry from "./VoiceEntry";
+import { useTableKit } from "@/lib/tablekit";
+
+const ROSTER_COLUMNS = [{ key: "full_name", label: "الطالب" }];
 
 interface RosterStudent { student_id: string; full_name: string }
 interface ExistingGrade { id: string; score: number }
@@ -40,6 +43,8 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
   const [moveIds, setMoveIds] = useState<Set<string>>(new Set());
 
   const exam = exams.find((e) => e.id === examId) ?? null;
+  // بحث في قائمة الطلاب يُصفّي الصفوف المعروضة فقط؛ الحفظ والإدخال الصوتي يبقيان على القائمة الكاملة
+  const tk = useTableKit(roster, ROSTER_COLUMNS);
   const fail = (m: string) => { setMessage(null); setError(friendly(m)); };
   const ok = (m: string) => { setError(null); setMessage(m); };
   const key = (studentId: string, compId: string | null) => `${studentId}|${compId ?? "flat"}`;
@@ -260,6 +265,7 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
               ok(`طُبّقت ${rows.length} علامة على الجدول — راجعها ثم اضغط «حفظ العلامات»`);
             }}
           />
+          {tk.toolbar}
           <div className="card fade-in" style={{ overflow: "hidden", marginBottom: 14 }}>
             <table className="data-table">
               <thead>
@@ -269,7 +275,7 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
                 </tr>
               </thead>
               <tbody>
-                {roster.map((s) => (
+                {tk.rows.map((s) => (
                   <tr key={s.student_id}>
                     <td>{s.full_name}</td>
                     {(cols ?? [{ id: null as string | null }]).map((c: any) => {

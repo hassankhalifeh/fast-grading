@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { AppUser } from "@/lib/types";
 import { Trash2 } from "lucide-react";
+import { useTableKit } from "@/lib/tablekit";
+
+const CAND_COLUMNS = [{ key: "student_name", label: "الطالب" }, { key: "class_name", label: "الشعبة" }, { key: "subject_name", label: "المادة" }, { key: "year_text", label: "علامة السنة" }];
+const RESULT_COLUMNS = [{ key: "student", label: "الطالب" }, { key: "subject", label: "المادة" }, { key: "year_text", label: "علامة السنة" }, { key: "supp_text", label: "التكميلي" }, { key: "final_text", label: "النهائية" }, { key: "thr_text", label: "حد النجاح" }];
+const PROMO_COLUMNS = [{ key: "student", label: "الطالب" }, { key: "class", label: "الشعبة" }, { key: "failed_before", label: "راسب قبل التكميلي" }, { key: "failed_after", label: "راسب بعده" }, { key: "status", label: "الحالة" }];
 
 interface Named { id: string; name: string }
 type Mode = "replace" | "higher_of" | "capped_at_pass";
@@ -58,6 +63,19 @@ export default function SupplementaryPanel({ accountId, appUser }: { accountId: 
   const ok = (m: string) => { setError(null); setMessage(m); };
   const session = sessions.find((s) => s.id === sessionId) ?? null;
   const nameOf = (list: Named[], id: string) => list.find((x) => x.id === id)?.name ?? "—";
+
+  // صفوف الجداول الثلاثة بنصوصها الظاهرة (أسماء لا معرّفات) ليعمل عليها البحث والفلترة
+  const candRows = useMemo(() => candidates.map((c) => ({ ...c, year_text: fmt(c.year_score) })), [candidates]);
+  const resultRows = useMemo(() => results.map((r) => ({
+    ...r, student: nameOf(students, r.student_id), subject: nameOf(subjects, r.subject_id), year_text: fmt(r.year_score),
+    supp_text: r.supp_score === null ? "لم يُجرَ" : fmt(r.supp_score), final_text: fmt(r.final_score), thr_text: fmt(r.pass_threshold),
+  })), [results, students, subjects]);
+  const promoRows = useMemo(() => promotion.filter((p) => Number(p.failed_before) > 0).map((p) => ({
+    ...p, student: nameOf(students, p.student_id), class: nameOf(classes, p.class_section_id), status: p.promoted ? "مرفَّع" : "غير مرفَّع",
+  })), [promotion, students, classes]);
+  const candTk = useTableKit(candRows, CAND_COLUMNS);
+  const resultTk = useTableKit(resultRows, RESULT_COLUMNS);
+  const promoTk = useTableKit(promoRows, PROMO_COLUMNS);
 
   async function loadBase() {
     const [se, su, cl, st, yr] = await Promise.all([
@@ -228,15 +246,16 @@ export default function SupplementaryPanel({ accountId, appUser }: { accountId: 
             <strong style={{ color: "var(--indigo)" }}>٢) الطلاب المرشّحون (علامة سنتهم أقل من حد النجاح)</strong>
             {candidates.length === 0 ? <p style={{ color: "var(--steel)", fontSize: "0.85rem", margin: "8px 0 0" }}>لا يوجد مرشحون (تظهر الاقتراحات بعد وجود علامات سنة لمواد الدور).</p> : (
               <>
+                {candTk.toolbar}
                 <table className="data-table" style={{ marginTop: 8 }}>
                   <thead><tr><th></th><th>الطالب</th><th>الشعبة</th><th>المادة</th><th>علامة السنة</th></tr></thead>
                   <tbody>
-                    {candidates.map((c) => {
+                    {candTk.rows.map((c) => {
                       const k = `${c.student_id}|${c.subject_id}`;
                       return (
                         <tr key={k}>
                           <td><input type="checkbox" checked={selCand.has(k)} onChange={() => setSelCand((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; })} /></td>
-                          <td>{c.student_name}</td><td>{c.class_name}</td><td>{c.subject_name}</td><td>{fmt(c.year_score)}</td>
+                          <td>{c.student_name}</td><td>{c.class_name}</td><td>{c.subject_name}</td><td>{c.year_text}</td>
                         </tr>
                       );
                     })}
@@ -283,15 +302,16 @@ export default function SupplementaryPanel({ accountId, appUser }: { accountId: 
           {results.length > 0 && (
             <div className="card" style={{ padding: "1rem", marginBottom: 14, overflowX: "auto" }}>
               <strong style={{ color: "var(--indigo)" }}>٤) نتائج التكميلي</strong>
+              {resultTk.toolbar}
               <table className="data-table" style={{ marginTop: 8 }}>
                 <thead><tr><th>الطالب</th><th>المادة</th><th>علامة السنة</th><th>التكميلي</th><th>النهائية</th><th>حد النجاح</th></tr></thead>
                 <tbody>
-                  {results.map((r, i) => (
+                  {resultTk.rows.map((r, i) => (
                     <tr key={i}>
-                      <td>{nameOf(students, r.student_id)}</td><td>{nameOf(subjects, r.subject_id)}</td>
-                      <td>{fmt(r.year_score)}</td><td>{r.supp_score === null ? "لم يُجرَ" : fmt(r.supp_score)}</td>
-                      <td style={{ fontWeight: 700, color: Number(r.final_score) >= Number(r.pass_threshold) ? "var(--green)" : "var(--red)" }}>{fmt(r.final_score)}</td>
-                      <td>{fmt(r.pass_threshold)}</td>
+                      <td>{r.student}</td><td>{r.subject}</td>
+                      <td>{r.year_text}</td><td>{r.supp_text}</td>
+                      <td style={{ fontWeight: 700, color: Number(r.final_score) >= Number(r.pass_threshold) ? "var(--green)" : "var(--red)" }}>{r.final_text}</td>
+                      <td>{r.thr_text}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -302,13 +322,14 @@ export default function SupplementaryPanel({ accountId, appUser }: { accountId: 
           {promotion.length > 0 && (
             <div className="card" style={{ padding: "1rem", overflowX: "auto" }}>
               <strong style={{ color: "var(--indigo)" }}>٥) الترفيع (الحد المسموح: {session.max_failed_subjects} مادة راسبة)</strong>
+              {promoTk.toolbar}
               <table className="data-table" style={{ marginTop: 8 }}>
                 <thead><tr><th>الطالب</th><th>الشعبة</th><th>راسب قبل التكميلي</th><th>راسب بعده</th><th>الحالة</th></tr></thead>
                 <tbody>
-                  {promotion.filter((p) => Number(p.failed_before) > 0).map((p, i) => (
+                  {promoTk.rows.map((p, i) => (
                     <tr key={i}>
-                      <td>{nameOf(students, p.student_id)}</td><td>{nameOf(classes, p.class_section_id)}</td><td>{p.failed_before}</td><td>{p.failed_after}</td>
-                      <td style={{ fontWeight: 700, color: p.promoted ? "var(--green)" : "var(--red)" }}>{p.promoted ? "مرفَّع" : "غير مرفَّع"}</td>
+                      <td>{p.student}</td><td>{p.class}</td><td>{p.failed_before}</td><td>{p.failed_after}</td>
+                      <td style={{ fontWeight: 700, color: p.promoted ? "var(--green)" : "var(--red)" }}>{p.status}</td>
                     </tr>
                   ))}
                 </tbody>
