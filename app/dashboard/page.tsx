@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAppUser } from "@/lib/useAppUser";
 import { useCapabilities } from "@/lib/useCapabilities";
 import { useFeatures } from "@/lib/useFeatures";
@@ -80,8 +81,15 @@ const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { appUser, loading } = useAppUser();
   const capabilities = useCapabilities(appUser);
+  // بلا جلسة دخول: العودة لصفحة الدخول بدل البقاء على «جارٍ التحميل» إلى الأبد
+  const [noProfile, setNoProfile] = useState(false);
+  useEffect(() => {
+    if (loading || appUser) return;
+    supabase.auth.getUser().then(({ data }) => { if (data.user) setNoProfile(true); else router.replace("/"); });
+  }, [loading, appUser, router]);
   const { features, refresh: refreshFeatures } = useFeatures(appUser);
   const sub = useSubscriptionStatus(appUser);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
@@ -133,6 +141,7 @@ export default function DashboardPage() {
     });
   }, [appUser, rows]);
 
+  if (noProfile) return <p style={{ padding: 24, color: "var(--red)" }}>لا يوجد ملف مستخدم مرتبط بهذا الحساب. تواصل مع مدير المدرسة.</p>;
   if (loading || capabilities === null) return <p style={{ padding: 24, color: "var(--steel)" }}>جارٍ التحميل...</p>;
   if (!appUser) return <p style={{ padding: 24, color: "var(--steel)" }}>الرجاء تسجيل الدخول.</p>;
 
