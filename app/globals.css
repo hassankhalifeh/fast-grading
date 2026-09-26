@@ -143,3 +143,6 @@ h1, h2, h3 { font-family: var(--font-display); }
 @media (prefers-reduced-motion: reduce) {
   .btn, .fade-in { animation: none !important; transition: none !important; }
 }
+
+/* tablekit: شريط البحث لا يُطبع */
+@media print { .no-print { display: none !important; } }
