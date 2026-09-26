@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { AppUser, AssessmentItem, GradingOverride, OverrideScope, OverrideTarget, TermRow } from "@/lib/types";
 import { Trash2 } from "lucide-react";
+import { useTableKit } from "@/lib/tablekit";
+
+const OVERRIDE_COLUMNS = [{ key: "scope_text", label: "النطاق" }, { key: "who", label: "يخص" }, { key: "target_text", label: "الهدف" }, { key: "value_text", label: "الوزن" }, { key: "note_text", label: "ملاحظة" }];
 
 interface Named { id: string; name: string }
 
@@ -126,6 +129,13 @@ export default function WeightsPanel({ accountId, appUser }: { accountId: string
     const it = items.find((i) => i.id === id);
     return it ? `${terms.find((t) => t.id === it.term_id)?.name ?? ""} — ${it.name}` : "—";
   };
+  const overrideRows = useMemo(() => overrides.map((o) => ({
+    ...o, scope_text: SCOPE_LABEL[o.scope],
+    who: [o.stage_id && name(stages, o.stage_id), o.class_section_id && name(classes, o.class_section_id), o.subject_id && name(subjects, o.subject_id)].filter(Boolean).join(" / ") || "—",
+    target_text: `${TARGET_LABEL[o.target]}: ${o.item_id ? itemLabel(o.item_id) : o.term_id ? name(terms as any, o.term_id) : name(exams, o.exam_id)}`,
+    value_text: `${o.value}${o.value === 0 ? " (غير مفعّل)" : ""}`, note_text: o.note ?? "",
+  })), [overrides, stages, classes, subjects, terms, exams, items]);
+  const overrideTk = useTableKit(overrideRows, OVERRIDE_COLUMNS);
 
   const targetOptions: { value: string; label: string }[] =
     target === "item_weight" ? items.map((i) => ({ value: i.id, label: itemLabel(i.id) }))
@@ -230,16 +240,17 @@ export default function WeightsPanel({ accountId, appUser }: { accountId: string
             <button type="submit" className="btn btn-gold">إضافة</button>
           </form>
 
+          {overrideTk.toolbar}
           <table className="data-table">
             <thead><tr><th>النطاق</th><th>يخص</th><th>الهدف</th><th>الوزن</th><th>ملاحظة</th><th></th></tr></thead>
             <tbody>
-              {overrides.filter((o) => tab === "custom").map((o) => (
+              {overrideTk.rows.filter(() => tab === "custom").map((o) => (
                 <tr key={o.id}>
-                  <td>{SCOPE_LABEL[o.scope]}</td>
-                  <td>{[o.stage_id && name(stages, o.stage_id), o.class_section_id && name(classes, o.class_section_id), o.subject_id && name(subjects, o.subject_id)].filter(Boolean).join(" / ") || "—"}</td>
-                  <td>{TARGET_LABEL[o.target]}: {o.item_id ? itemLabel(o.item_id) : o.term_id ? name(terms as any, o.term_id) : name(exams, o.exam_id)}</td>
-                  <td>{o.value}{o.value === 0 ? " (غير مفعّل)" : ""}</td>
-                  <td>{o.note ?? ""}</td>
+                  <td>{o.scope_text}</td>
+                  <td>{o.who}</td>
+                  <td>{o.target_text}</td>
+                  <td>{o.value_text}</td>
+                  <td>{o.note_text}</td>
                   <td><button onClick={() => removeOverride(o)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--red)" }}><Trash2 size={16} /></button></td>
                 </tr>
               ))}

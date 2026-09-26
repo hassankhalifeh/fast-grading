@@ -1,7 +1,8 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useTableKit } from "@/lib/tablekit";
 
 interface Sub {
   plan_type: string; status: "active" | "suspended"; expires_at: string | null; days_left: number | null;
@@ -24,6 +25,8 @@ const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBotto
 const SOLO_DEFAULTS = { max_classes: 6, max_students_per_class: 30, max_total_students: 150, max_buildings: 1, max_stages: 3 };
 const SCHOOL_DEFAULTS = { max_classes: 200, max_students_per_class: 100, max_total_students: 5000, max_buildings: 10, max_stages: 20 };
 type Limits = typeof SOLO_DEFAULTS;
+const SCHOOL_COLUMNS = [{ key: "display_name", label: "الحساب" }, { key: "type_text", label: "النوع" }, { key: "users", label: "المستخدمون" }, { key: "students", label: "الطلاب" }, { key: "sub_text", label: "الاشتراك" }];
+const VIOL_COLUMNS = [{ key: "school", label: "المدرسة" }, { key: "user_name", label: "المستخدم" }, { key: "context", label: "السياق" }, { key: "terms_text", label: "الألفاظ" }, { key: "excerpt", label: "النص" }, { key: "review_status", label: "الحالة" }];
 
 function fmtDate(s: string | null) { return s ? new Date(s).toLocaleDateString("ar") : "بلا انتهاء"; }
 
@@ -134,6 +137,17 @@ export default function PlatformPage() {
         onChange={(e) => set({ ...v, [key]: Math.max(0, Number(e.target.value) || 0) })} /></div>
   );
 
+  // صفوف الجدولين بنصوصها الظاهرة ليعمل عليها البحث والفلترة (الخطافات قبل أي return مبكر)
+  const schoolRows = useMemo(() => schools.map((s) => ({
+    ...s, type_text: TYPE_LABEL[s.account_type] ?? s.account_type,
+    sub_text: `${(s.subscription ? SUB_STATUS[s.subscription.sub_status] : SUB_STATUS.active).label} ${s.subscription ? fmtDate(s.subscription.expires_at) : ""}`.trim(),
+  })), [schools]);
+  const schoolTk = useTableKit(schoolRows, SCHOOL_COLUMNS);
+  const violRows = useMemo(() => viols.map((v) => ({
+    ...v, terms_text: `${v.categories.map((c) => CAT[c] ?? c).join(" ")} ${v.matched_terms.join(" ")}`, excerpt: v.excerpt ?? "",
+  })), [viols]);
+  const violTk = useTableKit(violRows, VIOL_COLUMNS);
+
   if (state === "loading") return <p style={{ padding: 24, color: "var(--steel)" }}>جارٍ التحميل...</p>;
   if (state === "denied") return <p style={{ padding: 24, color: "var(--steel)" }}>هذه الصفحة لمالك المنصة فقط. <a href="/dashboard">العودة للوحة التحكم</a></p>;
 
@@ -187,11 +201,12 @@ export default function PlatformPage() {
         </p>
       </div>
 
+      {schoolTk.toolbar}
       <div className="card" style={{ overflowX: "auto" }}>
         <table className="data-table">
           <thead><tr><th>الحساب</th><th>النوع</th><th>المستخدمون</th><th>الطلاب</th><th>الاشتراك</th>{features.map((f) => <th key={f}>{FEATURE_LABEL[f] ?? f}</th>)}<th></th></tr></thead>
           <tbody>
-            {schools.map((s) => {
+            {schoolTk.rows.map((s) => {
               const st = s.subscription ? SUB_STATUS[s.subscription.sub_status] : SUB_STATUS.active;
               return (
                 <Fragment key={s.id}>
@@ -249,11 +264,13 @@ export default function PlatformPage() {
         <button className="btn btn-secondary" onClick={() => setVFilter("all")} style={{ fontWeight: vFilter === "all" ? 800 : 400 }}>الكل</button>
       </div>
       {viols.length === 0 ? <p style={{ color: "var(--steel)" }}>لا توجد مخالفات.</p> : (
+        <>
+        {violTk.toolbar}
         <div className="card" style={{ overflowX: "auto" }}>
           <table className="data-table">
             <thead><tr><th>الوقت</th><th>المدرسة</th><th>المستخدم</th><th>السياق</th><th>الألفاظ</th><th>النص</th><th>الحالة</th><th>مراجعة</th></tr></thead>
             <tbody>
-              {viols.map((v) => (
+              {violTk.rows.map((v) => (
                 <tr key={v.id}>
                   <td style={{ fontSize: "0.78rem" }}>{new Date(v.occurred_at).toLocaleString("ar", { dateStyle: "short", timeStyle: "short" })}</td>
                   <td>{v.school}</td><td>{v.user_name ?? "—"}</td><td style={{ fontSize: "0.8rem" }}>{v.context}</td>
@@ -272,6 +289,7 @@ export default function PlatformPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <h3 style={{ margin: "22px 0 8px", color: "var(--indigo)" }}>قاموس الألفاظ العام</h3>

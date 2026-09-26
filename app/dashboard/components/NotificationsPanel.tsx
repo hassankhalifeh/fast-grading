@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { AppUser } from "@/lib/types";
 import { MESSAGE_TYPES, fmtNum, normalizePhone, paramsFromBody, render, typeByKey, type MessageType } from "@/lib/messageTypes";
 import BatchView from "./BatchView";
 import { FilePlus2 } from "lucide-react";
+import { useTableKit } from "@/lib/tablekit";
 
 interface Named { id: string; name: string }
 interface ExamRow { id: string; exam_name: string; exam_date: string | null; max_score: number; class_section_id: string; subject_id: string; class_sections: { name: string } | null; subjects: { name: string } | null }
@@ -15,6 +16,35 @@ interface BatchRow { id: string; message_type: string; title: string; status: st
 
 const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 } as const;
 const STATUS_LABEL: Record<string, string> = { draft: "مسودة", approved: "معتمدة", rejected: "مرفوضة", cancelled: "ملغاة" };
+const BATCH_COLUMNS = [{ key: "title", label: "الدفعة" }, { key: "type_label", label: "النوع" }, { key: "status_label", label: "الحالة" }, { key: "date_text", label: "التاريخ" }];
+
+// قائمة الدفعات (مسودات أو سجل) مع بحث وفلترة؛ مكوّن مستقل ليكون لكل قائمة حالتها
+function BatchList({ rows, onOpen }: { rows: BatchRow[]; onOpen: (id: string) => void }) {
+  const shaped = useMemo(() => rows.map((b) => ({
+    ...b, type_label: typeByKey(b.message_type)?.label ?? b.message_type, status_label: STATUS_LABEL[b.status] ?? b.status, date_text: new Date(b.created_at).toLocaleDateString("ar"),
+  })), [rows]);
+  const tk = useTableKit(shaped, BATCH_COLUMNS);
+  if (rows.length === 0) return <p style={{ color: "var(--steel)" }}>لا يوجد شيء هنا.</p>;
+  return (
+    <>
+      {tk.toolbar}
+      <div className="card" style={{ overflowX: "auto" }}>
+        <table className="data-table">
+          <thead><tr><th>الدفعة</th><th>النوع</th><th>الحالة</th><th>التاريخ</th><th></th></tr></thead>
+          <tbody>
+            {tk.rows.map((b) => (
+              <tr key={b.id}>
+                <td>{b.title}</td><td>{b.type_label}</td><td>{b.status_label}</td><td>{b.date_text}</td>
+                <td><button className="btn btn-secondary" style={{ fontSize: "0.78rem", padding: "3px 10px" }} onClick={() => onOpen(b.id)}>فتح</button></td>
+              </tr>
+            ))}
+            {tk.active && tk.rows.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--steel)" }}>لا نتائج مطابقة للبحث.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
 
 function friendly(m: string) {
   if (m.includes("row-level security")) return "ليس لديك صلاحية إعداد الرسائل";
@@ -202,22 +232,6 @@ export default function NotificationsPanel({ accountId, appUser, canApprove, can
     <button onClick={() => setTab(id)} className="btn"
       style={{ background: tab === id ? "var(--indigo)" : "white", color: tab === id ? "white" : "var(--steel)", border: "1.5px solid var(--fog-dark)", padding: "8px 18px" }}>{label}</button>
   );
-  const list = (rows: BatchRow[]) => rows.length === 0 ? <p style={{ color: "var(--steel)" }}>لا يوجد شيء هنا.</p> : (
-    <div className="card" style={{ overflowX: "auto" }}>
-      <table className="data-table">
-        <thead><tr><th>الدفعة</th><th>النوع</th><th>الحالة</th><th>التاريخ</th><th></th></tr></thead>
-        <tbody>
-          {rows.map((b) => (
-            <tr key={b.id}>
-              <td>{b.title}</td><td>{typeByKey(b.message_type)?.label ?? b.message_type}</td><td>{STATUS_LABEL[b.status] ?? b.status}</td>
-              <td>{new Date(b.created_at).toLocaleDateString("ar")}</td>
-              <td><button className="btn btn-secondary" style={{ fontSize: "0.78rem", padding: "3px 10px" }} onClick={() => setOpenBatch(b.id)}>فتح</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 
   return (
     <div>
@@ -271,8 +285,8 @@ export default function NotificationsPanel({ accountId, appUser, canApprove, can
           </p>
         </div>
       )}
-      {tab === "drafts" && list(drafts)}
-      {tab === "history" && list(history)}
+      {tab === "drafts" && <BatchList rows={drafts} onOpen={setOpenBatch} />}
+      {tab === "history" && <BatchList rows={history} onOpen={setOpenBatch} />}
     </div>
   );
 }

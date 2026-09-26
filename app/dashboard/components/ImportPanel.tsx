@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { AppUser } from "@/lib/types";
 import { parseCsv, normalizeAr, guessColumn } from "@/lib/csv";
+import { useTableKit } from "@/lib/tablekit";
 
 interface Named { id: string; name: string }
 type Kind = "student" | "class" | "teacher";
@@ -11,6 +12,17 @@ type Kind = "student" | "class" | "teacher";
 const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 } as const;
 const STATUS_LABEL: Record<string, string> = { pending_review: "بانتظار المراجعة", committed: "معتمدة", cancelled: "ملغاة" };
 const KIND_LABEL: Record<string, string> = { student: "طلاب", class: "صفوف", teacher: "معلمون" };
+
+// نص الحالة كما يظهر في جداول المراجعة (للبحث والفلترة)
+const studentStatusText = (s: any) => (s.match_status === "new" ? "جديد" : s.match_status === "identical" ? "مطابق" : `متصادم (${Math.round((s.similarity_score ?? 0) * 100)}%)`);
+const STUDENT_STAGING_COLUMNS = [{ key: "raw_full_name", label: "الاسم بالملف" }, { key: "status", label: "الحالة" }, { key: "matched", label: "الموجود بالنظام" }];
+const studentStagingText = (s: any, k: string) => (k === "status" ? studentStatusText(s) : k === "matched" ? s.matched?.full_name ?? "—" : String(s[k] ?? "—"));
+const CLASS_STAGING_COLUMNS = [{ key: "raw_name", label: "الصف" }, { key: "status", label: "الحالة" }];
+const classStagingText = (s: any, k: string) => (k === "status" ? (s.match_status === "new" ? "جديد — سيُضاف" : "موجود مسبقاً — يُتجاوز") : String(s[k] ?? "—"));
+const INVITE_COLUMNS = [{ key: "email", label: "البريد" }, { key: "msg", label: "النتيجة" }];
+const inviteText = (r: any, k: string) => (k === "msg" ? `${r.ok ? "✓ " : "✗ "}${r.msg}` : String(r[k] ?? "—"));
+const HISTORY_COLUMNS = [{ key: "entity_type", label: "النوع" }, { key: "status", label: "الحالة" }, { key: "created_at", label: "التاريخ" }];
+const historyText = (h: any, k: string) => (k === "entity_type" ? KIND_LABEL[h.entity_type] ?? h.entity_type : k === "status" ? STATUS_LABEL[h.status] ?? h.status : new Date(h.created_at).toLocaleString("ar"));
 
 function useNotes() {
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +172,7 @@ function StudentImport({ accountId, appUser, onBatchDone }: { accountId: string;
 
   const pending = staging.filter((s) => s.match_status === "conflict" && s.resolved_action === "pending").length;
   const count = (st: string) => staging.filter((s) => s.match_status === st).length;
+  const tk = useTableKit(staging, STUDENT_STAGING_COLUMNS, { getText: studentStagingText });
 
   if (batchId) {
     return (
@@ -168,15 +181,16 @@ function StudentImport({ accountId, appUser, onBatchDone }: { accountId: string;
         <p style={{ fontSize: "0.85rem", marginBottom: 10 }}>
           جديد: <b>{count("new")}</b> — مطابق (لا تغيير): <b>{count("identical")}</b> — متصادم يحتاج قرارك: <b style={{ color: pending ? "var(--red)" : "var(--green)" }}>{pending}</b>
         </p>
+        {tk.toolbar}
         <div className="card" style={{ overflowX: "auto", marginBottom: 12 }}>
           <table className="data-table">
             <thead><tr><th>الاسم بالملف</th><th>الحالة</th><th>الموجود بالنظام</th><th>القرار</th></tr></thead>
             <tbody>
-              {staging.map((s) => (
+              {tk.rows.map((s) => (
                 <tr key={s.id}>
                   <td>{s.raw_full_name}</td>
                   <td style={{ fontWeight: 700, color: s.match_status === "conflict" ? "var(--red)" : s.match_status === "new" ? "var(--green)" : "var(--steel)" }}>
-                    {s.match_status === "new" ? "جديد" : s.match_status === "identical" ? "مطابق" : `متصادم (${Math.round((s.similarity_score ?? 0) * 100)}%)`}
+                    {studentStatusText(s)}
                   </td>
                   <td>{s.matched?.full_name ?? "—"}</td>
                   <td>
@@ -252,6 +266,7 @@ function ClassImport({ accountId, appUser, onBatchDone }: { accountId: string; a
   const [batchId, setBatchId] = useState<string | null>(null);
   const [staging, setStaging] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
+  const tk = useTableKit(staging, CLASS_STAGING_COLUMNS, { getText: classStagingText });
 
   useEffect(() => {
     supabase.from("stages").select("id, stage_name").eq("account_id", accountId).then(({ data }) =>
@@ -316,10 +331,11 @@ function ClassImport({ accountId, appUser, onBatchDone }: { accountId: string; a
     return (
       <div>
         {banner}
+        {tk.toolbar}
         <div className="card" style={{ overflowX: "auto", marginBottom: 12 }}>
           <table className="data-table">
             <thead><tr><th>الصف</th><th>الحالة</th></tr></thead>
-            <tbody>{staging.map((s) => (
+            <tbody>{tk.rows.map((s) => (
               <tr key={s.id}><td>{s.raw_name}</td>
                 <td style={{ fontWeight: 700, color: s.match_status === "new" ? "var(--green)" : "var(--steel)" }}>{s.match_status === "new" ? "جديد — سيُضاف" : "موجود مسبقاً — يُتجاوز"}</td></tr>
             ))}</tbody>
@@ -360,6 +376,7 @@ function TeacherInvites({ appUser }: { appUser: AppUser }) {
   const [role, setRole] = useState("subject_teacher");
   const [results, setResults] = useState<{ email: string; ok: boolean; msg: string }[]>([]);
   const [busy, setBusy] = useState(false);
+  const tk = useTableKit(results, INVITE_COLUMNS, { getText: inviteText });
 
   function loaded(r: string[][]) {
     if (r.length < 2) return fail("الملف فارغ أو فيه سطر العناوين فقط");
@@ -413,10 +430,11 @@ function TeacherInvites({ appUser }: { appUser: AppUser }) {
           <button className="btn btn-gold" disabled={busy} onClick={send}>{busy ? "جارٍ الإرسال..." : `إرسال ${rows.length - 1} دعوة`}</button>
         </div>
       )}
+      {results.length > 0 && tk.toolbar}
       {results.length > 0 && (
         <div className="card" style={{ overflowX: "auto" }}>
           <table className="data-table"><thead><tr><th>البريد</th><th>النتيجة</th></tr></thead>
-            <tbody>{results.map((r, i) => <tr key={i}><td>{r.email}</td><td style={{ color: r.ok ? "var(--green)" : "var(--red)" }}>{r.ok ? "✓ " : "✗ "}{r.msg}</td></tr>)}</tbody></table>
+            <tbody>{tk.rows.map((r, i) => <tr key={i}><td>{r.email}</td><td style={{ color: r.ok ? "var(--green)" : "var(--red)" }}>{r.ok ? "✓ " : "✗ "}{r.msg}</td></tr>)}</tbody></table>
         </div>
       )}
     </div>
@@ -427,6 +445,7 @@ function TeacherInvites({ appUser }: { appUser: AppUser }) {
 export default function ImportPanel({ accountId, appUser }: { accountId: string; appUser: AppUser }) {
   const [kind, setKind] = useState<Kind>("student");
   const [history, setHistory] = useState<any[]>([]);
+  const tk = useTableKit(history, HISTORY_COLUMNS, { getText: historyText });
 
   async function loadHistory() {
     const { data } = await supabase.from("import_batches").select("id, entity_type, status, created_at, committed_at").eq("account_id", accountId).order("created_at", { ascending: false }).limit(10);
@@ -449,10 +468,11 @@ export default function ImportPanel({ accountId, appUser }: { accountId: string;
       {history.length > 0 && kind !== "teacher" && (
         <div style={{ marginTop: 22 }}>
           <strong style={{ color: "var(--indigo)" }}>آخر الدفعات</strong>
+          {tk.toolbar}
           <div className="card" style={{ marginTop: 8, overflowX: "auto" }}>
             <table className="data-table">
               <thead><tr><th>النوع</th><th>الحالة</th><th>التاريخ</th></tr></thead>
-              <tbody>{history.map((h) => (
+              <tbody>{tk.rows.map((h) => (
                 <tr key={h.id}><td>{KIND_LABEL[h.entity_type] ?? h.entity_type}</td><td>{STATUS_LABEL[h.status] ?? h.status}</td>
                   <td>{new Date(h.created_at).toLocaleString("ar")}</td></tr>
               ))}</tbody>
