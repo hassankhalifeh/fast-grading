@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAppUser } from "@/lib/useAppUser";
 import { useCapabilities } from "@/lib/useCapabilities";
 import { useFeatures } from "@/lib/useFeatures";
@@ -88,6 +88,9 @@ export default function DashboardPage() {
   useEffect(() => { if (appUser) supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true)); }, [appUser]);
 
   const [section, setSection] = useState<Section>("subjects");
+  const contentRef = useRef<HTMLDivElement>(null);
+  // عند تغيير الصفحة يبدأ المحتوى من أعلاه، بينما تحتفظ القائمة الجانبية بمكان تمريرها
+  useEffect(() => { contentRef.current?.scrollTo({ top: 0 }); }, [section]);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [componentsModalExam, setComponentsModalExam] = useState<{ id: string; name: string } | null>(null);
@@ -197,8 +200,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <nav style={{ width: 235, background: "var(--indigo)", padding: "1.5rem 0", flexShrink: 0 }}>
+    <div style={{ display: "flex", height: "100dvh", overflow: "hidden" }}>
+      <nav style={{ width: 235, background: "var(--indigo)", padding: "1.5rem 0", flexShrink: 0, overflowY: "auto", height: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 1.25rem", marginBottom: 22 }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <GraduationCap size={17} color="white" />
@@ -215,7 +218,8 @@ export default function DashboardPage() {
         )}
       </nav>
 
-      <main className="fade-in" style={{ flex: 1, padding: "1.75rem", maxWidth: 1100 }}>
+      <div ref={contentRef} style={{ flex: 1, minWidth: 0, height: "100%", overflowY: "auto" }}>
+      <main className="fade-in" style={{ padding: "1.75rem", maxWidth: 1100 }}>
         {sub && (sub.status === "suspended" || (sub.days_left !== null && sub.days_left <= 14)) && (
           <div style={{
             background: sub.status === "suspended" || (sub.days_left ?? 99) < 0 ? "#fde8e8" : "#fff6e0",
@@ -283,6 +287,7 @@ export default function DashboardPage() {
           </>
         )}
       </main>
+      </div>
 
       {showAddModal && fields && (
         <AddEntityModal
