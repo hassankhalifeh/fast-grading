@@ -5,9 +5,10 @@ import { supabase } from "@/lib/supabaseClient";
 import type { AppUser } from "@/lib/types";
 import { parseCsv, normalizeAr, guessColumn } from "@/lib/csv";
 import { useTableKit } from "@/lib/tablekit";
+import BulkExcelImportPanel from "./BulkExcelImportPanel";
 
 interface Named { id: string; name: string }
-type Kind = "student" | "class" | "teacher";
+type Kind = "student" | "class" | "teacher" | "bulk";
 
 const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 } as const;
 const STATUS_LABEL: Record<string, string> = { pending_review: "بانتظار المراجعة", committed: "معتمدة", cancelled: "ملغاة" };
@@ -460,12 +461,13 @@ export default function ImportPanel({ accountId, appUser }: { accountId: string;
 
   return (
     <div className="fade-in">
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>{tab("student", "الطلاب")}{tab("class", "الصفوف")}{tab("teacher", "المعلمون (دعوات)")}</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>{tab("student", "الطلاب")}{tab("class", "الصفوف")}{tab("teacher", "المعلمون (دعوات)")}{tab("bulk", "ملف Excel شامل")}</div>
       {kind === "student" && <StudentImport accountId={accountId} appUser={appUser} onBatchDone={loadHistory} />}
       {kind === "class" && <ClassImport accountId={accountId} appUser={appUser} onBatchDone={loadHistory} />}
       {kind === "teacher" && <TeacherInvites appUser={appUser} />}
+      {kind === "bulk" && <BulkExcelImportPanel accountId={accountId} appUser={appUser} />}
 
-      {history.length > 0 && kind !== "teacher" && (
+      {history.length > 0 && kind !== "teacher" && kind !== "bulk" && (
         <div style={{ marginTop: 22 }}>
           <strong style={{ color: "var(--indigo)" }}>آخر الدفعات</strong>
           {tk.toolbar}
