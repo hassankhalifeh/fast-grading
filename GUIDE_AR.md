@@ -76,5 +76,6 @@ on conflict (account_id, feature_key) do update set enabled = true;
 | المشرفون (شعبة/طابق/مرحلة/مبنى) | `guides/SUPERVISOR_GUIDE_AR.md` | https://claude.ai/artifact/BprawBTCPGkFpWXRvjvrQi |
 | الناظر العام / مدير المدرسة | `guides/SCHOOL_ADMIN_GUIDE_AR.md` | https://claude.ai/artifact/4Q3HregTxKdDGkgnSqw12R |
 | مالك المنصة (لك وحدك) | `guides/PLATFORM_OWNER_GUIDE_AR.md` | https://claude.ai/artifact/7GWPuHpbX9niw5rKep1yg7 |
+| **مرجع شامل** (يربط كل الأدوار + جدول كل صلاحية فردية) | `guides/MASTER_GUIDE_AR.md` | https://claude.ai/artifact/KUoARewhUu6rPhxXjeH54o |
 
 صفحات الويب خاصة (private) ولا يفتحها إلا من شاركتها معه من قائمة Share في الصفحة نفسها.
