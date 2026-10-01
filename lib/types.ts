@@ -21,6 +21,7 @@ export interface AppUser {
   email: string | null;
   role: UserRole;
   is_active: boolean;
+  default_section: string | null;
 }
 
 export interface Account {
