@@ -9,7 +9,7 @@ import { useSubscriptionStatus } from "@/lib/useSubscriptionStatus";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History, ShieldAlert,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History, ShieldAlert, Home, Pin, PinOff,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -32,11 +32,13 @@ import SchoolSettingsPanel from "./components/SchoolSettingsPanel";
 import WhatsAppSettingsPanel from "./components/WhatsAppSettingsPanel";
 import WhatsAppHistoryPanel from "./components/WhatsAppHistoryPanel";
 import ModerationPanel from "./components/ModerationPanel";
+import HomePanel from "./components/HomePanel";
 
-type Section = "moderation" | "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "home" | "moderation" | "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 // feature = إضافة مدفوعة/اختيارية يفعّلها مالك المنصة للحساب (تظهر فقط عند تفعيلها)
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string; feature?: string }[] = [
+  { id: "home", label: "الرئيسية", icon: Home },
   { id: "school", label: "معلومات المدرسة", icon: Info, capability: "config.manage" },
   { id: "subjects", label: "المواد", icon: BookOpen, capability: "config.manage" },
   { id: "stages", label: "المراحل", icon: Layers, capability: "config.manage" },
@@ -95,7 +97,20 @@ export default function DashboardPage() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   useEffect(() => { if (appUser) supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true)); }, [appUser]);
 
-  const [section, setSection] = useState<Section>("subjects");
+  const [section, setSection] = useState<Section>("home");
+  // عند أول وصول appUser تُطبَّق صفحته الافتراضية المحفوظة (إن وُجدت) مرة واحدة فقط، فلا تُقحم لاحقاً أثناء تنقّله.
+  const [defaultApplied, setDefaultApplied] = useState(false);
+  const [myDefault, setMyDefault] = useState<string | null>(null);
+  useEffect(() => {
+    if (!appUser || defaultApplied) return;
+    setMyDefault(appUser.default_section ?? null);
+    if (appUser.default_section) setSection(appUser.default_section as Section);
+    setDefaultApplied(true);
+  }, [appUser, defaultApplied]);
+  async function setSectionAsDefault(id: Section) {
+    setMyDefault(id === "home" ? null : id);
+    await supabase.rpc("set_my_default_section", { p_section: id === "home" ? null : id });
+  }
   const contentRef = useRef<HTMLDivElement>(null);
   // عند تغيير الصفحة يبدأ المحتوى من أعلاه، بينما تحتفظ القائمة الجانبية بمكان تمريرها
   useEffect(() => { contentRef.current?.scrollTo({ top: 0 }); }, [section]);
@@ -240,16 +255,28 @@ export default function DashboardPage() {
               : `اشتراك المدرسة ينتهي خلال ${sub.days_left} يوماً (${sub.expires_at ? new Date(sub.expires_at).toLocaleDateString("ar") : ""}) — تواصلوا مع إدارة المنصة للتجديد.`}
           </div>
         )}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <h2 style={{ fontSize: "1.3rem", margin: 0, color: "var(--indigo)" }}>
-            {SECTIONS.find((s) => s.id === section)?.label}
-          </h2>
-          {fields && (
-            <button onClick={() => setShowAddModal(true)} className="btn btn-gold">+ إضافة جديد</button>
-          )}
-        </div>
-        <div className="grade-underline" style={{ marginBottom: 18 }} />
+        {section !== "home" && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+              <h2 style={{ fontSize: "1.3rem", margin: 0, color: "var(--indigo)" }}>
+                {SECTIONS.find((s) => s.id === section)?.label}
+              </h2>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setSectionAsDefault(section)} disabled={myDefault === section} className="btn btn-secondary" style={{ fontSize: "0.78rem", padding: "6px 12px", opacity: myDefault === section ? 0.7 : 1 }}>
+                  {myDefault === section ? <><Pin size={13} /> صفحتك الافتراضية</> : <><PinOff size={13} /> اجعلها صفحتي الافتراضية</>}
+                </button>
+                {fields && (
+                  <button onClick={() => setShowAddModal(true)} className="btn btn-gold">+ إضافة جديد</button>
+                )}
+              </div>
+            </div>
+            <div className="grade-underline" style={{ marginBottom: 18 }} />
+          </>
+        )}
 
+        {section === "home" && (
+          <HomePanel accountId={appUser.account_id} appUser={appUser} capabilities={capabilities} isDefault={myDefault === null} onSetDefault={() => setSectionAsDefault("home")} onNavigate={(id) => setSection(id as Section)} />
+        )}
         {section === "gradingPolicy" && <GradingPolicyPanel accountId={appUser.account_id} />}
         {section === "teachers" && (
           <TeacherAssignmentsPanel accountId={appUser.account_id} appUser={appUser} canApprove={capabilities.has("teaching.approve_secondary")} />

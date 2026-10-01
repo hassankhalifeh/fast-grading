@@ -6,9 +6,10 @@ import type { AppUser } from "@/lib/types";
 import { Save } from "lucide-react";
 
 interface Settings {
-  principal_name: string; phone: string; email: string; address: string; country_code: string; report_footer: string; approval_mode: "self" | "other";
+  principal_name: string; phone: string; email: string; address: string; country_code: string; report_footer: string; approval_mode: "self" | "other"; logo_path: string | null;
 }
-const EMPTY: Settings = { principal_name: "", phone: "", email: "", address: "", country_code: "961", report_footer: "", approval_mode: "self" };
+const EMPTY: Settings = { principal_name: "", phone: "", email: "", address: "", country_code: "961", report_footer: "", approval_mode: "self", logo_path: null };
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 } as const;
 
 // معلومات المدرسة: كل ما يتغيّر من مدرسة لأخرى في مكان واحد (تظهر على الشهادات والرسائل وتضبط الإرسال).
@@ -17,9 +18,15 @@ export default function SchoolSettingsPanel({ accountId, appUser, showMessaging,
 }) {
   const [name, setName] = useState("");
   const [s, setS] = useState<Settings>(EMPTY);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function refreshLogoUrl(path: string | null) {
+    setLogoUrl(path ? supabase.storage.from("school-logos").getPublicUrl(path).data.publicUrl + `?v=${Date.now()}` : null);
+  }
 
   useEffect(() => {
     Promise.all([
@@ -28,12 +35,32 @@ export default function SchoolSettingsPanel({ accountId, appUser, showMessaging,
     ]).then(([a, st]) => {
       setName(a.data?.display_name ?? "");
       const d: any = st.data;
-      if (d) setS({
-        principal_name: d.principal_name ?? "", phone: d.phone ?? "", email: d.email ?? "", address: d.address ?? "",
-        country_code: d.country_code ?? "961", report_footer: d.report_footer ?? "", approval_mode: d.approval_mode ?? "self",
-      });
+      if (d) {
+        setS({
+          principal_name: d.principal_name ?? "", phone: d.phone ?? "", email: d.email ?? "", address: d.address ?? "",
+          country_code: d.country_code ?? "961", report_footer: d.report_footer ?? "", approval_mode: d.approval_mode ?? "self", logo_path: d.logo_path ?? null,
+        });
+        refreshLogoUrl(d.logo_path ?? null);
+      }
     });
   }, [accountId]);
+
+  async function uploadLogo(file: File) {
+    setError(null); setMessage(null);
+    if (!["image/png", "image/jpeg", "image/webp", "image/svg+xml"].includes(file.type)) return setError("الصيغ المقبولة: PNG أو JPG أو WEBP أو SVG");
+    if (file.size > MAX_LOGO_BYTES) return setError("حجم الصورة أكبر من 2 ميغابايت");
+    setUploadingLogo(true);
+    const ext = file.name.split(".").pop() || "png";
+    const path = `${accountId}/logo.${ext}`;
+    const { error: upErr } = await supabase.storage.from("school-logos").upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) { setUploadingLogo(false); return setError("تعذّر رفع الشعار: " + upErr.message); }
+    const { error: dbErr } = await supabase.from("school_settings").upsert({ account_id: accountId, logo_path: path, updated_at: new Date().toISOString() }, { onConflict: "account_id" });
+    setUploadingLogo(false);
+    if (dbErr) return setError("رُفعت الصورة لكن تعذّر حفظها: " + dbErr.message);
+    set("logo_path", path);
+    refreshLogoUrl(path);
+    setMessage("حُفظ شعار المدرسة");
+  }
 
   const set = (k: keyof Settings, v: string) => setS((p) => ({ ...p, [k]: v }));
 
@@ -54,7 +81,7 @@ export default function SchoolSettingsPanel({ accountId, appUser, showMessaging,
     setMessage("حُفظت معلومات المدرسة");
   }
 
-  const field = (label: string, k: keyof Settings, ph = "", w = 320) => (
+  const field = (label: string, k: "principal_name" | "phone" | "email" | "address" | "report_footer", ph = "", w = 320) => (
     <div><label style={lbl}>{label}</label>
       <input className="input" style={{ maxWidth: w }} value={s[k]} placeholder={ph} onChange={(e) => set(k, e.target.value)} /></div>
   );
@@ -74,8 +101,24 @@ export default function SchoolSettingsPanel({ accountId, appUser, showMessaging,
       {message && <p style={{ color: "var(--green)" }}>{message}</p>}
 
       <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 14 }}>
+          <div>
+            <label style={lbl}>شعار المدرسة (يظهر في الصفحة الرئيسية)</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 64, height: 64, borderRadius: 10, border: "1px solid var(--fog-dark)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "var(--fog)" }}>
+                {logoUrl ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <span style={{ fontSize: "0.7rem", color: "var(--steel)" }}>بلا شعار</span>}
+              </div>
+              <label className="btn btn-secondary" style={{ cursor: uploadingLogo ? "default" : "pointer", opacity: uploadingLogo ? 0.6 : 1, fontSize: "0.82rem" }}>
+                {uploadingLogo ? "جارٍ الرفع..." : "رفع / تغيير الشعار"}
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={uploadingLogo}
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) uploadLogo(f); }} style={{ display: "none" }} />
+              </label>
+            </div>
+            <div style={{ fontSize: "0.72rem", color: "var(--steel)", marginTop: 3 }}>PNG أو JPG أو WEBP أو SVG، حتى 2 ميغابايت</div>
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-          <div><label style={lbl}>اسم المدرسة (يظهر على الشهادات والرسائل)</label>
+          <div><label style={lbl}>اسم المدرسة (يظهر على الشهادات والرسائل والصفحة الرئيسية)</label>
             <input className="input" style={{ maxWidth: 320 }} value={name} onChange={(e) => setName(e.target.value)} /></div>
           {field("اسم المدير/ة", "principal_name")}
           {field("هاتف المدرسة", "phone", "", 200)}
