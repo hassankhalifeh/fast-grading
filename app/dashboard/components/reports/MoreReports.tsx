@@ -93,20 +93,27 @@ export function PendingExamsReport({ accountId }: { accountId: string }) {
     (async () => {
       setLoading(true);
       const { data: exams } = await supabase.from("exams")
-        .select("id, exam_name, exam_date, is_locked_by_admin, class_section_id, class_sections(name), subjects(name)")
+        .select("id, exam_name, exam_date, is_locked_by_admin, class_section_id, subject_id, supplementary_session_id, class_sections(name), subjects(name)")
         .eq("account_id", accountId).order("exam_date", { ascending: false }).limit(300);
       const list = (exams ?? []) as any[];
-      const [enr, gr] = await Promise.all([
+      const [enr, gr, elig] = await Promise.all([
         supabase.from("class_enrollments").select("class_section_id, status"),
         supabase.from("grades").select("exam_id"),
+        supabase.from("supplementary_eligibility").select("session_id, class_section_id, subject_id"),
       ]);
       const enrCount = new Map<string, number>();
       (enr.data ?? []).forEach((r: any) => { if (r.status === "active") enrCount.set(r.class_section_id, (enrCount.get(r.class_section_id) ?? 0) + 1); });
       const gradedCount = new Map<string, number>();
       (gr.data ?? []).forEach((r: any) => gradedCount.set(r.exam_id, (gradedCount.get(r.exam_id) ?? 0) + 1));
+      // امتحان التكميلي: العدد المتوقَّع هو مستحقّو هذه المادة والشعبة بهذا الدور، لا كل طلاب الشعبة
+      const eligCount = new Map<string, number>();
+      (elig.data ?? []).forEach((r: any) => { const k = `${r.session_id}|${r.class_section_id}|${r.subject_id}`; eligCount.set(k, (eligCount.get(k) ?? 0) + 1); });
       setRows(list.map((e) => ({
         id: e.id, label: `${e.class_sections?.name ?? "—"} · ${e.subjects?.name ?? "—"} · ${e.exam_name}`, date: e.exam_date,
-        enrolled: enrCount.get(e.class_section_id) ?? 0, graded: gradedCount.get(e.id) ?? 0, locked: !!e.is_locked_by_admin,
+        enrolled: e.supplementary_session_id
+          ? eligCount.get(`${e.supplementary_session_id}|${e.class_section_id}|${e.subject_id}`) ?? 0
+          : enrCount.get(e.class_section_id) ?? 0,
+        graded: gradedCount.get(e.id) ?? 0, locked: !!e.is_locked_by_admin,
       })));
       setLoading(false);
     })();
