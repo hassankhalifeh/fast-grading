@@ -97,6 +97,20 @@ export default function DashboardPage() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   useEffect(() => { if (appUser) supabase.rpc("is_platform_admin").then(({ data }) => setIsPlatformAdmin(data === true)); }, [appUser]);
 
+  // خلفية الصفحات: خلفية الحساب الخاصة إن وُجدت، وإلا خلفية المنصة الافتراضية التي يحددها مالك المنصة.
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+  function loadBackground() {
+    if (!appUser) return;
+    Promise.all([
+      supabase.from("school_settings").select("background_path").eq("account_id", appUser.account_id).maybeSingle(),
+      supabase.from("platform_settings").select("background_path").eq("id", true).maybeSingle(),
+    ]).then(([acc, plat]) => {
+      const path = acc.data?.background_path ?? plat.data?.background_path ?? null;
+      setBackgroundUrl(path ? supabase.storage.from("school-logos").getPublicUrl(path).data.publicUrl : null);
+    });
+  }
+  useEffect(() => { loadBackground(); }, [appUser]);
+
   const [section, setSection] = useState<Section>("home");
   // عند أول وصول appUser تُطبَّق صفحته الافتراضية المحفوظة (إن وُجدت) مرة واحدة فقط، فلا تُقحم لاحقاً أثناء تنقّله.
   const [defaultApplied, setDefaultApplied] = useState(false);
@@ -225,7 +239,14 @@ export default function DashboardPage() {
 
   return (
     <div style={{ display: "flex", height: "100dvh", overflow: "hidden" }}>
-      <nav style={{ width: 235, background: "var(--indigo)", padding: "1.5rem 0", flexShrink: 0, overflowY: "auto", height: "100%" }}>
+      {backgroundUrl && (
+        <div aria-hidden style={{
+          position: "fixed", inset: 0, zIndex: -1,
+          backgroundImage: `linear-gradient(rgba(247,245,240,0.86), rgba(247,245,240,0.86)), url(${backgroundUrl})`,
+          backgroundSize: "cover", backgroundPosition: "center",
+        }} />
+      )}
+      <nav style={{ width: 235, background: backgroundUrl ? "rgba(44,52,84,0.93)" : "var(--indigo)", padding: "1.5rem 0", flexShrink: 0, overflowY: "auto", height: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 1.25rem", marginBottom: 22 }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <GraduationCap size={17} color="white" />
@@ -283,7 +304,7 @@ export default function DashboardPage() {
         )}
         {section === "import" && <ImportPanel accountId={appUser.account_id} appUser={appUser} />}
         {section === "supplementary" && <SupplementaryPanel accountId={appUser.account_id} appUser={appUser} />}
-        {section === "school" && <SchoolSettingsPanel accountId={appUser.account_id} appUser={appUser} showMessaging={features.has("whatsapp_notifications")} onNavigate={(id) => setSection(id as Section)} />}
+        {section === "school" && <SchoolSettingsPanel accountId={appUser.account_id} appUser={appUser} showMessaging={features.has("whatsapp_notifications")} onNavigate={(id) => setSection(id as Section)} onBackgroundChanged={loadBackground} />}
         {section === "moderation" && features.has("whatsapp_history") && <ModerationPanel />}
         {section === "whatsappHistory" && features.has("whatsapp_history") && <WhatsAppHistoryPanel />}
         {section === "whatsappSettings" && features.has("whatsapp_notifications") && <WhatsAppSettingsPanel onChanged={refreshFeatures} />}

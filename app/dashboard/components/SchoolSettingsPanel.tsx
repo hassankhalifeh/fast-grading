@@ -6,26 +6,26 @@ import type { AppUser } from "@/lib/types";
 import { Save } from "lucide-react";
 
 interface Settings {
-  principal_name: string; phone: string; email: string; address: string; country_code: string; report_footer: string; approval_mode: "self" | "other"; logo_path: string | null;
+  principal_name: string; phone: string; email: string; address: string; country_code: string; report_footer: string; approval_mode: "self" | "other"; background_path: string | null;
 }
-const EMPTY: Settings = { principal_name: "", phone: "", email: "", address: "", country_code: "961", report_footer: "", approval_mode: "self", logo_path: null };
-const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const EMPTY: Settings = { principal_name: "", phone: "", email: "", address: "", country_code: "961", report_footer: "", approval_mode: "self", background_path: null };
+const MAX_BG_BYTES = 4 * 1024 * 1024;
 const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 } as const;
 
-// معلومات المدرسة: كل ما يتغيّر من مدرسة لأخرى في مكان واحد (تظهر على الشهادات والرسائل وتضبط الإرسال).
-export default function SchoolSettingsPanel({ accountId, appUser, showMessaging, onNavigate }: {
-  accountId: string; appUser: AppUser; showMessaging: boolean; onNavigate: (section: string) => void;
+// معلومات المدرسة: كل ما يتغيّر من مدرسة لأخرى في مكان واحد (تظهر على الشهادات والرسائل وخلف صفحات لوحة التحكم).
+export default function SchoolSettingsPanel({ accountId, appUser, showMessaging, onNavigate, onBackgroundChanged }: {
+  accountId: string; appUser: AppUser; showMessaging: boolean; onNavigate: (section: string) => void; onBackgroundChanged?: () => void;
 }) {
   const [name, setName] = useState("");
   const [s, setS] = useState<Settings>(EMPTY);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [bgUrl, setBgUrl] = useState<string | null>(null);
+  const [uploadingBg, setUploadingBg] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function refreshLogoUrl(path: string | null) {
-    setLogoUrl(path ? supabase.storage.from("school-logos").getPublicUrl(path).data.publicUrl + `?v=${Date.now()}` : null);
+  function refreshBgUrl(path: string | null) {
+    setBgUrl(path ? supabase.storage.from("school-logos").getPublicUrl(path).data.publicUrl + `?v=${Date.now()}` : null);
   }
 
   useEffect(() => {
@@ -38,41 +38,43 @@ export default function SchoolSettingsPanel({ accountId, appUser, showMessaging,
       if (d) {
         setS({
           principal_name: d.principal_name ?? "", phone: d.phone ?? "", email: d.email ?? "", address: d.address ?? "",
-          country_code: d.country_code ?? "961", report_footer: d.report_footer ?? "", approval_mode: d.approval_mode ?? "self", logo_path: d.logo_path ?? null,
+          country_code: d.country_code ?? "961", report_footer: d.report_footer ?? "", approval_mode: d.approval_mode ?? "self", background_path: d.background_path ?? null,
         });
-        refreshLogoUrl(d.logo_path ?? null);
+        refreshBgUrl(d.background_path ?? null);
       }
     });
   }, [accountId]);
 
-  async function uploadLogo(file: File) {
+  async function uploadBackground(file: File) {
     setError(null); setMessage(null);
-    if (!["image/png", "image/jpeg", "image/webp", "image/svg+xml"].includes(file.type)) return setError("الصيغ المقبولة: PNG أو JPG أو WEBP أو SVG");
-    if (file.size > MAX_LOGO_BYTES) return setError("حجم الصورة أكبر من 2 ميغابايت");
-    setUploadingLogo(true);
-    const ext = file.name.split(".").pop() || "png";
-    const path = `${accountId}/logo.${ext}`;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return setError("الصيغ المقبولة: PNG أو JPG أو WEBP");
+    if (file.size > MAX_BG_BYTES) return setError("حجم الصورة أكبر من 4 ميغابايت");
+    setUploadingBg(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${accountId}/background.${ext}`;
     const { error: upErr } = await supabase.storage.from("school-logos").upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) { setUploadingLogo(false); return setError("تعذّر رفع الشعار: " + upErr.message); }
-    const { error: dbErr } = await supabase.from("school_settings").upsert({ account_id: accountId, logo_path: path, updated_at: new Date().toISOString() }, { onConflict: "account_id" });
-    setUploadingLogo(false);
+    if (upErr) { setUploadingBg(false); return setError("تعذّر رفع الخلفية: " + upErr.message); }
+    const { error: dbErr } = await supabase.from("school_settings").upsert({ account_id: accountId, background_path: path, updated_at: new Date().toISOString() }, { onConflict: "account_id" });
+    setUploadingBg(false);
     if (dbErr) return setError("رُفعت الصورة لكن تعذّر حفظها: " + dbErr.message);
-    set("logo_path", path);
-    refreshLogoUrl(path);
-    setMessage("حُفظ شعار المدرسة");
+    set("background_path", path);
+    refreshBgUrl(path);
+    setMessage("حُفظت خلفية الحساب");
+    onBackgroundChanged?.();
   }
 
-  async function removeLogo() {
-    if (!s.logo_path) return;
+  async function removeBackground() {
+    if (!s.background_path) return;
     setError(null); setMessage(null);
-    setUploadingLogo(true);
-    const { error: rmErr } = await supabase.storage.from("school-logos").remove([s.logo_path]);
-    const { error: dbErr } = await supabase.from("school_settings").update({ logo_path: null, updated_at: new Date().toISOString() }).eq("account_id", accountId);
-    setUploadingLogo(false);
-    if (rmErr || dbErr) return setError("تعذّرت إزالة الشعار: " + (rmErr ?? dbErr)!.message);
-    set("logo_path", "");
-    refreshLogoUrl(null);
-    setMessage("أُزيل شعار المدرسة");
+    setUploadingBg(true);
+    const { error: rmErr } = await supabase.storage.from("school-logos").remove([s.background_path]);
+    const { error: dbErr } = await supabase.from("school_settings").update({ background_path: null, updated_at: new Date().toISOString() }).eq("account_id", accountId);
+    setUploadingBg(false);
+    if (rmErr || dbErr) return setError("تعذّرت إزالة الخلفية: " + (rmErr ?? dbErr)!.message);
+    set("background_path", "");
+    refreshBgUrl(null);
+    setMessage("أُزيلت خلفية الحساب — ستُستعمل خلفية المنصة الافتراضية إن وُجدت");
+    onBackgroundChanged?.();
   }
 
   const set = (k: keyof Settings, v: string) => setS((p) => ({ ...p, [k]: v }));
@@ -116,23 +118,23 @@ export default function SchoolSettingsPanel({ accountId, appUser, showMessaging,
       <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 14 }}>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 14 }}>
           <div>
-            <label style={lbl}>شعار المدرسة (يظهر في الصفحة الرئيسية)</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 10, border: "1px solid var(--fog-dark)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "var(--fog)" }}>
-                {logoUrl ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <span style={{ fontSize: "0.7rem", color: "var(--steel)" }}>بلا شعار</span>}
+            <label style={lbl}>خلفية الحساب (تظهر خلف كل صفحات لوحة التحكم)</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ width: 120, height: 68, borderRadius: 10, border: "1px solid var(--fog-dark)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "var(--fog)" }}>
+                {bgUrl ? <img src={bgUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "0.7rem", color: "var(--steel)" }}>بلا خلفية خاصة</span>}
               </div>
-              <label className="btn btn-secondary" style={{ cursor: uploadingLogo ? "default" : "pointer", opacity: uploadingLogo ? 0.6 : 1, fontSize: "0.82rem" }}>
-                {uploadingLogo ? "جارٍ..." : "رفع / تغيير الشعار"}
-                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={uploadingLogo}
-                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) uploadLogo(f); }} style={{ display: "none" }} />
+              <label className="btn btn-secondary" style={{ cursor: uploadingBg ? "default" : "pointer", opacity: uploadingBg ? 0.6 : 1, fontSize: "0.82rem" }}>
+                {uploadingBg ? "جارٍ..." : "رفع / تغيير الخلفية"}
+                <input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploadingBg}
+                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) uploadBackground(f); }} style={{ display: "none" }} />
               </label>
-              {s.logo_path && (
-                <button type="button" className="btn btn-secondary" style={{ fontSize: "0.82rem", color: "var(--red)" }} disabled={uploadingLogo} onClick={removeLogo}>
-                  إزالة الشعار
+              {s.background_path && (
+                <button type="button" className="btn btn-secondary" style={{ fontSize: "0.82rem", color: "var(--red)" }} disabled={uploadingBg} onClick={removeBackground}>
+                  إزالة الخلفية
                 </button>
               )}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "var(--steel)", marginTop: 3 }}>PNG أو JPG أو WEBP أو SVG، حتى 2 ميغابايت</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--steel)", marginTop: 3 }}>PNG أو JPG أو WEBP، حتى 4 ميغابايت. إن لم تضع خلفية خاصة، تُستعمل خلفية المنصة الافتراضية التي يحددها مالك المنصة.</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
