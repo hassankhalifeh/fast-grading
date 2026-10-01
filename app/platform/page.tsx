@@ -4,6 +4,70 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useTableKit } from "@/lib/tablekit";
 
+const MAX_PLATFORM_BG_BYTES = 4 * 1024 * 1024;
+
+// خلفية المنصة الافتراضية: تظهر خلف كل صفحات لوحة التحكم لأي حساب لم يضع خلفيته الخاصة.
+function PlatformBackgroundCard() {
+  const [path, setPath] = useState<string | null>(null);
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  function refreshUrl(p: string | null) {
+    setUrl(p ? supabase.storage.from("school-logos").getPublicUrl(p).data.publicUrl + `?v=${Date.now()}` : null);
+  }
+  function load() {
+    supabase.from("platform_settings").select("background_path").eq("id", true).maybeSingle()
+      .then(({ data }) => { setPath(data?.background_path ?? null); refreshUrl(data?.background_path ?? null); });
+  }
+  useEffect(() => { load(); }, []);
+
+  async function upload(file: File) {
+    setErr(null); setOk(null);
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return setErr("الصيغ المقبولة: PNG أو JPG أو WEBP");
+    if (file.size > MAX_PLATFORM_BG_BYTES) return setErr("حجم الصورة أكبر من 4 ميغابايت");
+    setBusy(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const p = `_platform/background.${ext}`;
+    const { error: upErr } = await supabase.storage.from("school-logos").upload(p, file, { upsert: true, contentType: file.type });
+    if (upErr) { setBusy(false); return setErr("تعذّر الرفع: " + upErr.message); }
+    const { error: dbErr } = await supabase.from("platform_settings").update({ background_path: p, updated_at: new Date().toISOString() }).eq("id", true);
+    setBusy(false);
+    if (dbErr) return setErr("رُفعت الصورة لكن تعذّر حفظها: " + dbErr.message);
+    setPath(p); refreshUrl(p); setOk("حُفظت الخلفية الافتراضية للمنصة");
+  }
+  async function remove() {
+    if (!path) return;
+    setErr(null); setOk(null); setBusy(true);
+    const { error: rmErr } = await supabase.storage.from("school-logos").remove([path]);
+    const { error: dbErr } = await supabase.from("platform_settings").update({ background_path: null, updated_at: new Date().toISOString() }).eq("id", true);
+    setBusy(false);
+    if (rmErr || dbErr) return setErr("تعذّرت الإزالة: " + (rmErr ?? dbErr)!.message);
+    setPath(null); refreshUrl(null); setOk("أُزيلت الخلفية الافتراضية للمنصة");
+  }
+
+  return (
+    <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 18 }}>
+      <h3 style={{ marginTop: 0, fontSize: "1rem" }}>الخلفية الافتراضية للمنصة</h3>
+      <p style={{ fontSize: "0.82rem", color: "var(--steel)", marginTop: 0 }}>تظهر خلف كل صفحات لوحة التحكم لأي حساب لم يضع خلفيته الخاصة من «معلومات المدرسة».</p>
+      {err && <p style={{ color: "var(--red)", fontSize: "0.85rem" }}>{err}</p>}
+      {ok && <p style={{ color: "var(--green)", fontSize: "0.85rem" }}>{ok}</p>}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ width: 140, height: 78, borderRadius: 10, border: "1px solid var(--fog-dark)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "var(--fog)" }}>
+          {url ? <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "0.7rem", color: "var(--steel)" }}>بلا خلفية افتراضية</span>}
+        </div>
+        <label className="btn btn-secondary" style={{ cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, fontSize: "0.82rem" }}>
+          {busy ? "جارٍ..." : "رفع / تغيير"}
+          <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy}
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) upload(f); }} style={{ display: "none" }} />
+        </label>
+        {path && <button type="button" className="btn btn-secondary" style={{ fontSize: "0.82rem", color: "var(--red)" }} disabled={busy} onClick={remove}>إزالة</button>}
+      </div>
+    </div>
+  );
+}
+
 interface Sub {
   plan_type: string; status: "active" | "suspended"; expires_at: string | null; days_left: number | null;
   sub_status: "active" | "expiring_soon" | "expired" | "suspended"; notes: string | null;
@@ -160,6 +224,8 @@ export default function PlatformPage() {
       <div className="grade-underline" style={{ margin: "8px 0 18px" }} />
       {error && <p style={{ color: "var(--red)" }}>{error}</p>}
       {message && <p style={{ color: "var(--green)" }}>{message}</p>}
+
+      <PlatformBackgroundCard />
 
       <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 18 }}>
         <h3 style={{ marginTop: 0, fontSize: "1rem" }}>إنشاء حساب جديد</h3>

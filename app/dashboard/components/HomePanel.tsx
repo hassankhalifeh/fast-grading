@@ -13,23 +13,17 @@ const SHORTCUTS: Shortcut[] = [
   { section: "import", label: "الاستيراد الجماعي", icon: Upload, capability: "records.import_manage" },
 ];
 
-// الصفحة الرئيسية: ترحيب باسم المدرسة وشعارها (يعدّلهما مدير المدرسة من «معلومات المدرسة»)، أرقام سريعة،
-// واختصارات لأكثر الشاشات استعمالاً. كل مستخدم يقدر يجعل أي صفحة أخرى صفحته الافتراضية بدل هذه.
+// الصفحة الرئيسية: ترحيب باسم المدرسة (خلفية الحساب تظهر خلف كل صفحة، تُعدَّل من «معلومات المدرسة»)،
+// أرقام سريعة، واختصارات لأكثر الشاشات استعمالاً. كل مستخدم يقدر يجعل أي صفحة أخرى صفحته الافتراضية بدل هذه.
 export default function HomePanel({ accountId, appUser, capabilities, isDefault, onSetDefault, onNavigate }: {
   accountId: string; appUser: AppUser; capabilities: Set<string>; isDefault: boolean; onSetDefault: () => void; onNavigate: (section: string) => void;
 }) {
   const [schoolName, setSchoolName] = useState("");
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [counts, setCounts] = useState<{ students: number; classes: number; openExams: number } | null>(null);
 
   useEffect(() => {
     supabase.from("accounts").select("display_name").eq("id", accountId).maybeSingle()
       .then(({ data }) => setSchoolName(data?.display_name ?? ""));
-    supabase.from("school_settings").select("logo_path").eq("account_id", accountId).maybeSingle()
-      .then(({ data }) => {
-        if (!data?.logo_path) return setLogoUrl(null);
-        setLogoUrl(supabase.storage.from("school-logos").getPublicUrl(data.logo_path).data.publicUrl);
-      });
     Promise.all([
       supabase.from("students").select("id", { count: "exact", head: true }).eq("account_id", accountId),
       supabase.from("class_sections").select("id", { count: "exact", head: true }).eq("account_id", accountId),
@@ -47,13 +41,9 @@ export default function HomePanel({ accountId, appUser, capabilities, isDefault,
   return (
     <div>
       <div className="card" style={{ padding: "1.4rem 1.6rem", marginBottom: 18, display: "flex", alignItems: "center", gap: 16, background: "var(--indigo)", color: "white" }}>
-        {logoUrl ? (
-          <img src={logoUrl} alt="" style={{ width: 56, height: 56, borderRadius: 12, objectFit: "contain", background: "white", padding: 4 }} />
-        ) : (
-          <div style={{ width: 56, height: 56, borderRadius: 12, background: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <GraduationCap size={28} color="white" />
-          </div>
-        )}
+        <div style={{ width: 56, height: 56, borderRadius: 12, background: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <GraduationCap size={28} color="white" />
+        </div>
         <div>
           <p style={{ margin: 0, fontSize: "1.3rem", fontWeight: 800 }}>أهلاً {appUser.full_name}</p>
           <p style={{ margin: "4px 0 0", opacity: 0.85, fontSize: "0.95rem" }}>{schoolName || "لوحة التحكم"}</p>
