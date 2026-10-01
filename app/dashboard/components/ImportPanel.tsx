@@ -6,6 +6,7 @@ import type { AppUser } from "@/lib/types";
 import { parseCsv, normalizeAr, guessColumn } from "@/lib/csv";
 import { useTableKit } from "@/lib/tablekit";
 import BulkExcelImportPanel from "./BulkExcelImportPanel";
+import { buildSingleSheetTemplate, readFirstSheetAsRows, downloadBlob } from "@/lib/bulkExcel";
 
 interface Named { id: string; name: string }
 type Kind = "student" | "class" | "teacher" | "bulk";
@@ -39,17 +40,37 @@ function useNotes() {
   return { fail, ok, banner };
 }
 
-function FileLoader({ onLoaded }: { onLoaded: (rows: string[][]) => void }) {
+// يقبل ملف Excel (.xlsx) أو CSV؛ كلاهما يدخلان بنفس شكل الصفوف في نفس مسار المطابقة والتعارضات أدناه.
+// templateName/templateHeaders اختياريان: إن وُجدا يظهر زر لتنزيل نموذج Excel جاهز بعناوين هذا الجدول بالذات.
+function FileLoader({ onLoaded, templateName, templateHeaders }: { onLoaded: (rows: string[][]) => void; templateName?: string; templateHeaders?: string[] }) {
   const [text, setText] = useState("");
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
+    e.target.value = "";
     if (!f) return;
-    f.text().then((t) => onLoaded(parseCsv(t)));
+    setErr(null);
+    if (f.name.toLowerCase().endsWith(".xlsx")) {
+      setBusy(true);
+      try { onLoaded(await readFirstSheetAsRows(f)); } catch (ex: any) { setErr("تعذّرت قراءة ملف Excel: " + ex.message); } finally { setBusy(false); }
+    } else {
+      f.text().then((t) => onLoaded(parseCsv(t)));
+    }
+  }
+  async function downloadTemplate() {
+    if (!templateName || !templateHeaders) return;
+    setBusy(true);
+    try { downloadBlob(await buildSingleSheetTemplate(templateName, templateHeaders), `نموذج-${templateName}.xlsx`); } finally { setBusy(false); }
   }
   return (
     <div className="card" style={{ padding: "1.1rem", marginBottom: 14 }}>
-      <label style={lbl}>ملف CSV (من Excel: احفظ باسم ← CSV UTF-8) — السطر الأول عناوين الأعمدة</label>
-      <input type="file" accept=".csv,.txt,.tsv" onChange={handleFile} style={{ marginBottom: 10 }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8 }}>
+        <label style={lbl}>ملف Excel (.xlsx) أو CSV — السطر الأول عناوين الأعمدة</label>
+        {templateName && <button type="button" className="btn btn-secondary" style={{ fontSize: "0.78rem", padding: "4px 10px" }} disabled={busy} onClick={downloadTemplate}>تنزيل نموذج Excel</button>}
+      </div>
+      <input type="file" accept=".xlsx,.csv,.txt,.tsv" onChange={handleFile} disabled={busy} style={{ marginBottom: 10 }} />
+      {err && <p style={{ color: "var(--red)", fontSize: "0.82rem" }}>{err}</p>}
       <label style={lbl}>أو الصق البيانات هنا</label>
       <textarea className="input" style={{ height: 90 }} value={text} onChange={(e) => setText(e.target.value)} placeholder={"الاسم,هاتف ولي الأمر\nمحمد أحمد,0123"} />
       <button className="btn btn-secondary" style={{ marginTop: 8 }} onClick={() => onLoaded(parseCsv(text))} disabled={!text.trim()}>قراءة البيانات</button>
@@ -237,7 +258,7 @@ function StudentImport({ accountId, appUser, onBatchDone }: { accountId: string;
       <p style={{ fontSize: "0.85rem", color: "var(--steel)", marginBottom: 10 }}>
         المطابقة تتم ضمن نفس الصف وتتسامح مع اختلاف الهمزة والتاء المربوطة والتشكيل. أي اسم مشابه وليس مطابقاً يُعرض عليك لتقرر قبل الاعتماد.
       </p>
-      <FileLoader onLoaded={loaded} />
+      <FileLoader onLoaded={loaded} templateName="الطلاب" templateHeaders={["اسم الطالب", "الصف", "اسم ولي الأمر", "هاتف ولي الأمر", "بريد ولي الأمر"]} />
       {rows.length > 1 && (
         <div className="card" style={{ padding: "1.1rem" }}>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
@@ -353,7 +374,7 @@ function ClassImport({ accountId, appUser, onBatchDone }: { accountId: string; a
   return (
     <div>
       {banner}
-      <FileLoader onLoaded={loaded} />
+      <FileLoader onLoaded={loaded} templateName="الصفوف" templateHeaders={["اسم الصف", "المستوى", "الشعبة", "المرحلة"]} />
       {rows.length > 1 && (
         <div className="card" style={{ padding: "1.1rem" }}>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
@@ -416,7 +437,7 @@ function TeacherInvites({ appUser }: { appUser: AppUser }) {
       <p style={{ fontSize: "0.85rem", color: "var(--steel)", marginBottom: 10 }}>
         المعلمون يحتاجون حساب دخول، فالاستيراد هنا يرسل دعوة لكل بريد (نفس شاشة "المستخدمون"). من سبق تسجيله يُذكر في النتيجة.
       </p>
-      <FileLoader onLoaded={loaded} />
+      <FileLoader onLoaded={loaded} templateName="المعلمون" templateHeaders={["الاسم", "البريد الإلكتروني", "الهاتف"]} />
       {rows.length > 1 && (
         <div className="card" style={{ padding: "1.1rem", marginBottom: 12 }}>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
