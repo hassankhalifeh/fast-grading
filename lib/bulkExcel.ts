@@ -115,6 +115,41 @@ export async function readWorkbookSheets(file: File): Promise<Record<string, Rec
   return out;
 }
 
+// نموذج بورقة واحدة لجدول بعينه (الطلاب أو الصفوف أو المعلمون كلٌّ على حدة)، بعكس buildTemplateWorkbook
+// الذي يبني الملف الشامل متعدد الأوراق. العناوين هنا يجب أن تطابق الكلمات التي يبحث عنها guessColumn
+// في lib/csv.ts حتى يتعرّف الاستيراد المفرد على الأعمدة تلقائياً دون أي تغيير في منطقه.
+export async function buildSingleSheetTemplate(sheetName: string, headers: string[]): Promise<Blob> {
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet(sheetName.slice(0, 31), { views: [{ rightToLeft: true }] });
+  ws.addRow(headers);
+  ws.getRow(1).font = { bold: true };
+  ws.columns = headers.map(() => ({ width: 26 }));
+  const buf = await wb.xlsx.writeBuffer();
+  return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
+// يقرأ أول ورقة من ملف Excel مفرد كمصفوفة صفوف (نص عناوين أولاً) بنفس شكل خرج parseCsv تماماً،
+// ليدخل في نفس مسار المطابقة والتعارضات المستعمل أصلاً لملفات CSV دون أي تعديل عليه.
+export async function readFirstSheetAsRows(file: File): Promise<string[][]> {
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await file.arrayBuffer());
+  const ws = wb.worksheets[0];
+  if (!ws) return [];
+  const rows: string[][] = [];
+  ws.eachRow({ includeEmpty: true }, (row) => {
+    const cells: string[] = [];
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      const v = cell.value;
+      const text = v === null || v === undefined ? "" : typeof v === "object" && "text" in (v as any) ? String((v as any).text) : String(v);
+      cells.push(text.trim());
+    });
+    if (cells.some((c) => c !== "")) rows.push(cells);
+  });
+  return rows;
+}
+
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
