@@ -62,6 +62,19 @@ export default function SchoolSettingsPanel({ accountId, appUser, showMessaging,
     setMessage("حُفظ شعار المدرسة");
   }
 
+  async function removeLogo() {
+    if (!s.logo_path) return;
+    setError(null); setMessage(null);
+    setUploadingLogo(true);
+    const { error: rmErr } = await supabase.storage.from("school-logos").remove([s.logo_path]);
+    const { error: dbErr } = await supabase.from("school_settings").update({ logo_path: null, updated_at: new Date().toISOString() }).eq("account_id", accountId);
+    setUploadingLogo(false);
+    if (rmErr || dbErr) return setError("تعذّرت إزالة الشعار: " + (rmErr ?? dbErr)!.message);
+    set("logo_path", "");
+    refreshLogoUrl(null);
+    setMessage("أُزيل شعار المدرسة");
+  }
+
   const set = (k: keyof Settings, v: string) => setS((p) => ({ ...p, [k]: v }));
 
   async function save() {
@@ -109,10 +122,15 @@ export default function SchoolSettingsPanel({ accountId, appUser, showMessaging,
                 {logoUrl ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <span style={{ fontSize: "0.7rem", color: "var(--steel)" }}>بلا شعار</span>}
               </div>
               <label className="btn btn-secondary" style={{ cursor: uploadingLogo ? "default" : "pointer", opacity: uploadingLogo ? 0.6 : 1, fontSize: "0.82rem" }}>
-                {uploadingLogo ? "جارٍ الرفع..." : "رفع / تغيير الشعار"}
+                {uploadingLogo ? "جارٍ..." : "رفع / تغيير الشعار"}
                 <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" disabled={uploadingLogo}
                   onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) uploadLogo(f); }} style={{ display: "none" }} />
               </label>
+              {s.logo_path && (
+                <button type="button" className="btn btn-secondary" style={{ fontSize: "0.82rem", color: "var(--red)" }} disabled={uploadingLogo} onClick={removeLogo}>
+                  إزالة الشعار
+                </button>
+              )}
             </div>
             <div style={{ fontSize: "0.72rem", color: "var(--steel)", marginTop: 3 }}>PNG أو JPG أو WEBP أو SVG، حتى 2 ميغابايت</div>
           </div>
