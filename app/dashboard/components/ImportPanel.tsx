@@ -6,10 +6,11 @@ import type { AppUser } from "@/lib/types";
 import { parseCsv, normalizeAr, guessColumn } from "@/lib/csv";
 import { useTableKit } from "@/lib/tablekit";
 import BulkExcelImportPanel from "./BulkExcelImportPanel";
-import { buildSingleSheetTemplate, readFirstSheetAsRows, downloadBlob } from "@/lib/bulkExcel";
+import { buildSingleSheetTemplate, readFirstSheetAsRows, downloadBlob, SUBJECTS_SHEET, STAGES_SHEET } from "@/lib/bulkExcel";
+import SimpleTable from "./SimpleTable";
 
 interface Named { id: string; name: string }
-type Kind = "student" | "class" | "teacher" | "bulk";
+type Kind = "subject" | "stage" | "student" | "class" | "teacher" | "bulk";
 
 const lbl = { display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 } as const;
 const STATUS_LABEL: Record<string, string> = { pending_review: "بانتظار المراجعة", committed: "معتمدة", cancelled: "ملغاة" };
@@ -463,6 +464,117 @@ function TeacherInvites({ appUser }: { appUser: AppUser }) {
   );
 }
 
+// ---------------------------------------------------------------- المواد
+// جدول بعمود واحد فلا حاجة لمسار المراجعة والتعارضات الموجود في الطلاب/الصفوف؛ تكرار الاسم يُتخطّى فوراً ويُذكر في النتيجة.
+type SimpleResult = { row: number; item: string; status: "ok" | "skipped" | "error"; message: string };
+const SIMPLE_RESULT_COLUMNS = [{ key: "row", label: "السطر" }, { key: "item", label: "العنصر" }, { key: "status_text", label: "النتيجة" }, { key: "message", label: "التفاصيل" }];
+const SIMPLE_STATUS_TEXT: Record<SimpleResult["status"], string> = { ok: "✓ أُضيف", skipped: "تخطٍّ", error: "✗ خطأ" };
+
+function SubjectsImport({ accountId }: { accountId: string }) {
+  const { fail, ok, banner } = useNotes();
+  const [rows, setRows] = useState<string[][]>([]);
+  const [map, setMap] = useState({ name: -1 });
+  const [busy, setBusy] = useState(false);
+  const [results, setResults] = useState<SimpleResult[]>([]);
+
+  function loaded(r: string[][]) {
+    if (r.length < 2) return fail("الملف فارغ أو فيه سطر العناوين فقط");
+    setRows(r);
+    setMap({ name: guessColumn(r[0], ["اسم المادة", "المادة", "subject", "name"]) });
+    setResults([]);
+    ok(`تمت قراءة ${r.length - 1} سطر`);
+  }
+
+  async function run() {
+    if (map.name < 0) return fail("اختر عمود اسم المادة");
+    setBusy(true);
+    const { data: existing } = await supabase.from("subjects").select("name").eq("account_id", accountId);
+    const known = new Set((existing ?? []).map((s: any) => normalizeAr(s.name)));
+    const out: SimpleResult[] = [];
+    for (let i = 0; i < rows.slice(1).length; i++) {
+      const name = (rows[i + 1][map.name] ?? "").trim();
+      if (!name) continue;
+      const key = normalizeAr(name);
+      if (known.has(key)) { out.push({ row: i + 2, item: name, status: "skipped", message: "موجودة مسبقاً" }); continue; }
+      const { error: err } = await supabase.from("subjects").insert({ account_id: accountId, name });
+      if (err) out.push({ row: i + 2, item: name, status: "error", message: err.message });
+      else { known.add(key); out.push({ row: i + 2, item: name, status: "ok", message: "أُضيفت" }); }
+    }
+    setResults(out);
+    setBusy(false);
+    ok(`اكتمل: ${out.filter((r) => r.status === "ok").length} أُضيفت من ${out.length}`);
+  }
+
+  return (
+    <div>
+      {banner}
+      <FileLoader onLoaded={loaded} templateName={SUBJECTS_SHEET.name} templateHeaders={SUBJECTS_SHEET.headers} />
+      {rows.length > 1 && (
+        <div className="card" style={{ padding: "1.1rem", marginBottom: 14 }}>
+          <ColumnSelect label="اسم المادة" headers={rows[0]} value={map.name} onChange={(n) => setMap({ name: n })} required />
+          <button className="btn btn-gold" style={{ marginTop: 10 }} disabled={busy} onClick={run}>{busy ? "جارٍ الاستيراد..." : `استيراد ${rows.length - 1} سطر`}</button>
+        </div>
+      )}
+      {results.length > 0 && <SimpleTable columns={SIMPLE_RESULT_COLUMNS} rows={results.map((r) => ({ ...r, status_text: SIMPLE_STATUS_TEXT[r.status] }))} />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- المراحل
+function StagesImport({ accountId }: { accountId: string }) {
+  const { fail, ok, banner } = useNotes();
+  const [rows, setRows] = useState<string[][]>([]);
+  const [map, setMap] = useState({ name: -1, order: -1 });
+  const [busy, setBusy] = useState(false);
+  const [results, setResults] = useState<SimpleResult[]>([]);
+
+  function loaded(r: string[][]) {
+    if (r.length < 2) return fail("الملف فارغ أو فيه سطر العناوين فقط");
+    setRows(r);
+    setMap({ name: guessColumn(r[0], ["اسم المرحلة", "المرحلة", "stage"]), order: guessColumn(r[0], ["الترتيب", "order"]) });
+    setResults([]);
+    ok(`تمت قراءة ${r.length - 1} سطر`);
+  }
+
+  async function run() {
+    if (map.name < 0) return fail("اختر عمود اسم المرحلة");
+    setBusy(true);
+    const { data: existing } = await supabase.from("stages").select("stage_name").eq("account_id", accountId);
+    const known = new Set((existing ?? []).map((s: any) => normalizeAr(s.stage_name)));
+    const out: SimpleResult[] = [];
+    for (let i = 0; i < rows.slice(1).length; i++) {
+      const name = (rows[i + 1][map.name] ?? "").trim();
+      if (!name) continue;
+      const key = normalizeAr(name);
+      if (known.has(key)) { out.push({ row: i + 2, item: name, status: "skipped", message: "موجودة مسبقاً" }); continue; }
+      const orderRaw = map.order >= 0 ? (rows[i + 1][map.order] ?? "").trim() : "";
+      const { error: err } = await supabase.from("stages").insert({ account_id: accountId, stage_name: name, order_index: orderRaw ? Number(orderRaw) : null });
+      if (err) out.push({ row: i + 2, item: name, status: "error", message: err.message });
+      else { known.add(key); out.push({ row: i + 2, item: name, status: "ok", message: "أُضيفت" }); }
+    }
+    setResults(out);
+    setBusy(false);
+    ok(`اكتمل: ${out.filter((r) => r.status === "ok").length} أُضيفت من ${out.length}`);
+  }
+
+  return (
+    <div>
+      {banner}
+      <FileLoader onLoaded={loaded} templateName={STAGES_SHEET.name} templateHeaders={STAGES_SHEET.headers} />
+      {rows.length > 1 && (
+        <div className="card" style={{ padding: "1.1rem", marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+            <ColumnSelect label="اسم المرحلة" headers={rows[0]} value={map.name} onChange={(n) => setMap({ ...map, name: n })} required />
+            <ColumnSelect label="الترتيب" headers={rows[0]} value={map.order} onChange={(n) => setMap({ ...map, order: n })} />
+          </div>
+          <button className="btn btn-gold" disabled={busy} onClick={run}>{busy ? "جارٍ الاستيراد..." : `استيراد ${rows.length - 1} سطر`}</button>
+        </div>
+      )}
+      {results.length > 0 && <SimpleTable columns={SIMPLE_RESULT_COLUMNS} rows={results.map((r) => ({ ...r, status_text: SIMPLE_STATUS_TEXT[r.status] }))} />}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------- الحاوية
 export default function ImportPanel({ accountId, appUser }: { accountId: string; appUser: AppUser }) {
   const [kind, setKind] = useState<Kind>("student");
@@ -482,13 +594,15 @@ export default function ImportPanel({ accountId, appUser }: { accountId: string;
 
   return (
     <div className="fade-in">
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>{tab("student", "الطلاب")}{tab("class", "الصفوف")}{tab("teacher", "المعلمون (دعوات)")}{tab("bulk", "ملف Excel شامل")}</div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>{tab("subject", "المواد")}{tab("stage", "المراحل")}{tab("student", "الطلاب")}{tab("class", "الصفوف")}{tab("teacher", "المعلمون (دعوات)")}{tab("bulk", "ملف Excel شامل")}</div>
+      {kind === "subject" && <SubjectsImport accountId={accountId} />}
+      {kind === "stage" && <StagesImport accountId={accountId} />}
       {kind === "student" && <StudentImport accountId={accountId} appUser={appUser} onBatchDone={loadHistory} />}
       {kind === "class" && <ClassImport accountId={accountId} appUser={appUser} onBatchDone={loadHistory} />}
       {kind === "teacher" && <TeacherInvites appUser={appUser} />}
       {kind === "bulk" && <BulkExcelImportPanel accountId={accountId} appUser={appUser} />}
 
-      {history.length > 0 && kind !== "teacher" && kind !== "bulk" && (
+      {history.length > 0 && kind !== "teacher" && kind !== "bulk" && kind !== "subject" && kind !== "stage" && (
         <div style={{ marginTop: 22 }}>
           <strong style={{ color: "var(--indigo)" }}>آخر الدفعات</strong>
           {tk.toolbar}
