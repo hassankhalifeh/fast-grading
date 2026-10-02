@@ -18,8 +18,8 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: "غير مصرّح" }, 401);
 
   const url = Deno.env.get("SUPABASE_URL")!;
-  const asUser = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
-  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  const asUser = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
+  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
 
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "جلسة غير صالحة" }, 401);

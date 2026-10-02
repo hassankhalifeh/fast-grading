@@ -68,25 +68,25 @@ export default function PlatformPage() {
   const [gKind, setGKind] = useState<"block" | "allow">("block");
 
   async function load() {
-    const { data, error: e } = await supabase.functions.invoke("platform-admin", { body: { action: "list" } });
+    const { data, error: e } = await supabase.functions.invoke("fastgrading-platform-admin", { body: { action: "list" } });
     if (e || data?.error) { setState("denied"); return; }
     setSchools(data.schools ?? []); setFeatures(data.features ?? []); setState("ok");
   }
   async function loadViols(f = vFilter) {
-    const { data } = await supabase.functions.invoke("platform-admin", { body: { action: "violations", status: f } });
+    const { data } = await supabase.functions.invoke("fastgrading-platform-admin", { body: { action: "violations", status: f } });
     setViols(data?.violations ?? []);
   }
   async function loadTerms() {
-    const { data } = await supabase.functions.invoke("platform-admin", { body: { action: "terms_list" } });
+    const { data } = await supabase.functions.invoke("fastgrading-platform-admin", { body: { action: "terms_list" } });
     setGterms(data?.terms ?? []);
   }
   async function reviewV(id: string, status: string) {
-    const { data, error: e } = await supabase.functions.invoke("platform-admin", { body: { action: "review_violation", id, status, note: vNotes[id] ?? "" } });
+    const { data, error: e } = await supabase.functions.invoke("fastgrading-platform-admin", { body: { action: "review_violation", id, status, note: vNotes[id] ?? "" } });
     if (e || data?.error) return setError(data?.error ?? e?.message ?? "تعذّرت المراجعة");
     setError(null); loadViols();
   }
   async function termCall(body: Record<string, unknown>) {
-    const { data, error: e } = await supabase.functions.invoke("platform-admin", { body });
+    const { data, error: e } = await supabase.functions.invoke("fastgrading-platform-admin", { body });
     if (e || data?.error) return setError(data?.error ?? e?.message ?? "تعذّر التنفيذ");
     setError(null); setGTerm(""); loadTerms();
   }
@@ -96,7 +96,7 @@ export default function PlatformPage() {
 
   async function createAccount() {
     setError(null); setMessage(null); setBusy(true);
-    const { data, error: e } = await supabase.functions.invoke("platform-admin", {
+    const { data, error: e } = await supabase.functions.invoke("fastgrading-platform-admin", {
       body: {
         action: "create_account", account_type: accountType, name, admin_name: adminName, admin_email: adminEmail,
         features: withFeatures, redirect_to: `${window.location.origin}/`, expires_at: expiresAt || null, limits, plan_type: planType || undefined,
@@ -108,7 +108,7 @@ export default function PlatformPage() {
   }
   async function toggle(s: School, key: string) {
     const on = !s.enabled_features.includes(key);
-    const { data, error: e } = await supabase.functions.invoke("platform-admin", { body: { action: "set_feature", account_id: s.id, feature_key: key, enabled: on } });
+    const { data, error: e } = await supabase.functions.invoke("fastgrading-platform-admin", { body: { action: "set_feature", account_id: s.id, feature_key: key, enabled: on } });
     if (e || data?.error) return setError(data?.error ?? e?.message ?? "تعذّر التغيير");
     setError(null); load();
   }
@@ -123,7 +123,7 @@ export default function PlatformPage() {
   }
   async function saveEdit(id: string) {
     setBusy(true); setError(null);
-    const { data, error: e } = await supabase.functions.invoke("platform-admin", {
+    const { data, error: e } = await supabase.functions.invoke("fastgrading-platform-admin", {
       body: { action: "update_account", account_id: id, limits: editLimits, expires_at: editExpires || null, status: editStatus, plan_type: editPlan || undefined, note: editNote },
     });
     setBusy(false);

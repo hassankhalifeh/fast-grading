@@ -108,7 +108,7 @@ export default function BatchView({ batchId, appUser, canApprove, canSend, waCon
   );
   async function sendAuto() {
     setBusy(true);
-    const { data, error: e } = await supabase.functions.invoke("send-whatsapp", { body: { batch_id: batchId } });
+    const { data, error: e } = await supabase.functions.invoke("fastgrading-send-whatsapp", { body: { batch_id: batchId } });
     setBusy(false);
     if (e || data?.error) return fail(data?.error === "not_configured" ? "الإرسال التلقائي غير مفعّل بعد" : data?.error ?? e?.message ?? "تعذّر الإرسال");
     ok(`أُرسلت ${data.sent} رسالة، وفشلت ${data.failed}`); load();

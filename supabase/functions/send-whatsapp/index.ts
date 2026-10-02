@@ -22,9 +22,9 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: "غير مصرّح" }, 401);
 
   const version = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
 
-  const asUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
+  const asUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "جلسة غير صالحة" }, 401);
 

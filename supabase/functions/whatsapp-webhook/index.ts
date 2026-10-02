@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   const accountId = u.searchParams.get("a") ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(accountId)) return new Response("bad request", { status: 400 });
 
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
   const { data: creds } = await admin.rpc("wa_get_credentials", { p_account: accountId });
   if (!creds) return new Response("forbidden", { status: 403 });
 

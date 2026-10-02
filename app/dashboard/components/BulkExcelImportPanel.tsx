@@ -134,7 +134,7 @@ export default function BulkExcelImportPanel({ accountId, appUser }: { accountId
         const role = roleText ? ROLE_TEXT_TO_KEY[roleText] : "subject_teacher";
         if (!role) { out.push({ sheet: TEACHERS_SHEET.name, row: Number(r.__row), item: name, status: "error", message: `دور غير معروف: "${roleText}"` }); continue; }
         if (!allowedRoles.includes(role)) { out.push({ sheet: TEACHERS_SHEET.name, row: Number(r.__row), item: name, status: "error", message: "دورك الحالي لا يسمح بدعوة هذا الدور" }); continue; }
-        const { data, error: err } = await supabase.functions.invoke("invite-user", {
+        const { data, error: err } = await supabase.functions.invoke("fastgrading-invite-user", {
           body: { email, full_name: name, phone: (r["الهاتف (اختياري)"] ?? "").trim() || null, role, redirect_to: window.location.origin },
         });
         let msg = data?.message ?? data?.error ?? "";

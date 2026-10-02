@@ -104,7 +104,7 @@ export default function NotificationsPanel({ accountId, appUser, canApprove, can
   }
   useEffect(() => { loadBase(); loadBatches(); }, [accountId]);
   useEffect(() => {
-    supabase.functions.invoke("send-whatsapp", { body: { action: "status" } }).then(({ data, error: e }) => setWaConfigured(!e && !!data?.configured));
+    supabase.functions.invoke("fastgrading-send-whatsapp", { body: { action: "status" } }).then(({ data, error: e }) => setWaConfigured(!e && !!data?.configured));
   }, []);
 
   // ---- مصادر المستلمين لكل نوع
