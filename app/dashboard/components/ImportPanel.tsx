@@ -418,7 +418,7 @@ function TeacherInvites({ appUser }: { appUser: AppUser }) {
       const email = (r[map.email] ?? "").trim();
       const full_name = (r[map.name] ?? "").trim();
       if (!email || !full_name) continue;
-      const { data, error: err } = await supabase.functions.invoke("invite-user", {
+      const { data, error: err } = await supabase.functions.invoke("fastgrading-invite-user", {
         body: { email, full_name, phone: map.phone >= 0 ? r[map.phone] || null : null, role, redirect_to: window.location.origin },
       });
       let msg = data?.message ?? data?.error ?? "";

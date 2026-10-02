@@ -45,7 +45,7 @@ export default function WhatsAppSettingsPanel({ onChanged }: { onChanged: () => 
 
   async function call(action: "save" | "test") {
     setBusy(true); setError(null); setMessage(null);
-    const { data, error: e } = await supabase.functions.invoke("whatsapp-admin", {
+    const { data, error: e } = await supabase.functions.invoke("fastgrading-whatsapp-admin", {
       body: { action, phone_number_id: phoneId, waba_id: waba || null, access_token: token || null, app_secret: appSecret || null },
     });
     setBusy(false);
@@ -59,7 +59,7 @@ export default function WhatsAppSettingsPanel({ onChanged }: { onChanged: () => 
   if (!st.entitled) return <p style={{ color: "var(--steel)" }}>هذه الخدمة غير مفعّلة لمدرستك. تواصل مع إدارة المنصة للاشتراك بها.</p>;
 
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const hookUrl = `${base}/functions/v1/whatsapp-webhook?a=${st.account_id}`;
+  const hookUrl = `${base}/functions/v1/fastgrading-whatsapp-webhook?a=${st.account_id}`;
   const status = st.status ?? "not_configured";
   const stColor = status === "verified" ? "var(--green)" : status === "error" ? "var(--red)" : "var(--steel)";
 

@@ -51,7 +51,7 @@ export default function UsersPanel({ appUser }: { appUser: AppUser }) {
     e.preventDefault();
     if (!email || !fullName) return fail("اكتب الاسم والبريد الإلكتروني");
     setSending(true);
-    const { data, error: err } = await supabase.functions.invoke("invite-user", {
+    const { data, error: err } = await supabase.functions.invoke("fastgrading-invite-user", {
       body: { email, full_name: fullName, phone: phone || null, role, redirect_to: window.location.origin },
     });
     setSending(false);
