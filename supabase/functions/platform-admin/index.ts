@@ -1,5 +1,16 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Supabase API keys: the new named keys (sb_secret_… / sb_publishable_…, key "default"), falling back to the
+// legacy JWT keys only while those still exist.
+function supabaseKey(namedKeysVar: string, legacyVar: string): string | undefined {
+  try {
+    const k = JSON.parse(Deno.env.get(namedKeysVar) ?? "{}").default;
+    if (typeof k === "string" && k) return k;
+  } catch { /* not provisioned */ }
+  return Deno.env.get(legacyVar);
+}
+
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -8,7 +19,6 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-// الإضافات المسموح تفعيلها (تُضاف هنا كلما ظهرت إضافة جديدة)
 const FEATURES = ["whatsapp_notifications"];
 const ACCOUNT_TYPES = ["solo_teacher", "school_enterprise"];
 
@@ -24,8 +34,6 @@ function readLimits(body: any) {
   };
 }
 
-// أدوات مالك المنصة فقط (platform_admins): قائمة الحسابات، إنشاء حساب جديد (solo أو مدرسة) بحدوده وتاريخ انتهائه،
-// تعديل حدود حساب قائم، تفعيل/إيقاف الإضافات، مراجعة مخالفات المحتوى والقاموس العام.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "الطريقة غير مدعومة" }, 405);
@@ -34,8 +42,8 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: "غير مصرّح" }, 401);
 
   const url = Deno.env.get("SUPABASE_URL")!;
-  const asUser = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
-  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
+  const asUser = createClient(url, supabaseKey("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
+  const admin = createClient(url, supabaseKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
 
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "جلسة غير صالحة" }, 401);
@@ -94,7 +102,6 @@ Deno.serve(async (req) => {
     return json({ account: acc.data, subscription: sp.data, active_classes: cls.count ?? 0 });
   }
 
-  // ===== ضبط المحتوى: مخالفات كل المدارس + القاموس العام =====
   if (body.action === "violations") {
     const status = body.status === "all" ? null : String(body.status ?? "open");
     let q = admin.from("message_violations").select("*").order("occurred_at", { ascending: false }).limit(300);
@@ -148,7 +155,6 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
-  // تعديل حدود/انتهاء/حالة حساب قائم (بلا حاجة لإعادة إنشائه)
   if (body.action === "update_account") {
     const accountId = String(body.account_id ?? "");
     const { data: acc } = await admin.from("accounts").select("id").eq("id", accountId).maybeSingle();
@@ -199,7 +205,6 @@ Deno.serve(async (req) => {
 
     await admin.rpc("apply_default_capabilities", { p_app_user_id: created.id, p_role: role });
     await admin.from("grading_policies").insert({ account_id: account.id });
-    // الحساب حصل على سجل حدود افتراضي تلقائياً (المُشغّل)؛ نستبدله بما اختاره مالك المنصة عند الإنشاء
     await admin.from("subscription_profiles").update({
       ...readLimits(body), expires_at: expiresAt, status: "active", updated_by_platform: true,
       plan_type: body.plan_type ? String(body.plan_type).slice(0, 60) : (accountType === "solo_teacher" ? "solo_teacher_paid" : "school_custom"),

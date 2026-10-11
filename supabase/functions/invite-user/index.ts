@@ -1,5 +1,16 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Supabase API keys: the new named keys (sb_secret_… / sb_publishable_…, key "default"), falling back to the
+// legacy JWT keys only while those still exist.
+function supabaseKey(namedKeysVar: string, legacyVar: string): string | undefined {
+  try {
+    const k = JSON.parse(Deno.env.get(namedKeysVar) ?? "{}").default;
+    if (typeof k === "string" && k) return k;
+  } catch { /* not provisioned */ }
+  return Deno.env.get(legacyVar);
+}
+
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -20,8 +31,8 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: "غير مصرّح" }, 401);
 
   const url = Deno.env.get("SUPABASE_URL")!;
-  const asUser = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
-  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
+  const asUser = createClient(url, supabaseKey("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
+  const admin = createClient(url, supabaseKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
 
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "جلسة غير صالحة" }, 401);

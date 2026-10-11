@@ -1,9 +1,15 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// استقبال حالات التسليم (sent / delivered / read / failed) من Meta لكل مدرسة على حدة.
-// عنوان كل مدرسة: .../whatsapp-webhook?a=<account_id> (تضعه المدرسة في تطبيقها لدى Meta).
-// verify_jwt = false لأن Meta لا ترسل JWT؛ الحماية: رمز التحقق الخاص بالمدرسة (GET) وتوقيع X-Hub-Signature-256 بـApp Secret المدرسة (POST).
-// التحديث محصور بحساب المدرسة نفسها فلا تتأثر رسائل مدرسة أخرى. كل رسالة واردة/صادرة تُوثَّق في whatsapp_messages ولا تُحذف.
+// Supabase API keys: the new named keys (sb_secret_… / sb_publishable_…, key "default"), falling back to the
+// legacy JWT keys only while those still exist.
+function supabaseKey(namedKeysVar: string, legacyVar: string): string | undefined {
+  try {
+    const k = JSON.parse(Deno.env.get(namedKeysVar) ?? "{}").default;
+    if (typeof k === "string" && k) return k;
+  } catch { /* not provisioned */ }
+  return Deno.env.get(legacyVar);
+}
+
 
 const enc = new TextEncoder();
 function safeEqual(a: string, b: string) {
@@ -24,7 +30,7 @@ Deno.serve(async (req) => {
   const accountId = u.searchParams.get("a") ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(accountId)) return new Response("bad request", { status: 400 });
 
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, supabaseKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
   const { data: creds } = await admin.rpc("wa_get_credentials", { p_account: accountId });
   if (!creds) return new Response("forbidden", { status: 403 });
 
@@ -46,7 +52,6 @@ Deno.serve(async (req) => {
 
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
-      // ردود أولياء الأمور الواردة: تُوثَّق في دفتر المحادثات مع الرقم الذي وصلت إليه
       const meta = change.value?.metadata;
       for (const m of change.value?.messages ?? []) {
         const text = m.type === "text" ? m.text?.body : m.type === "button" ? m.button?.text : `[${m.type}]`;
