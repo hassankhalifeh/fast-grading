@@ -1,5 +1,16 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Supabase API keys: the new named keys (sb_secret_… / sb_publishable_…, key "default"), falling back to the
+// legacy JWT keys only while those still exist.
+function supabaseKey(namedKeysVar: string, legacyVar: string): string | undefined {
+  try {
+    const k = JSON.parse(Deno.env.get(namedKeysVar) ?? "{}").default;
+    if (typeof k === "string" && k) return k;
+  } catch { /* not provisioned */ }
+  return Deno.env.get(legacyVar);
+}
+
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -11,9 +22,6 @@ const json = (body: unknown, status = 200) =>
 const MAX_PER_CALL = 200;
 const CONCURRENCY = 5;
 
-// إرسال دفعة إشعارات واتساب عبر WhatsApp Cloud API.
-// الإرسال من رقم المدرسة نفسها: بياناتها (Phone Number ID والتوكن) في Vault وتُقرأ هنا بمفتاح الخدمة فقط.
-// كل القراءة والتحديث تتم بجلسة المستخدم نفسه (RLS)، فلا يرسل أحد إلا لطلاب حسابه وبصلاحية notifications.send.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "الطريقة غير مدعومة" }, 405);
@@ -22,17 +30,15 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: "غير مصرّح" }, 401);
 
   const version = Deno.env.get("WHATSAPP_API_VERSION") ?? "v21.0";
-  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, supabaseKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
 
-  const asUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
+  const asUser = createClient(Deno.env.get("SUPABASE_URL")!, supabaseKey("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "جلسة غير صالحة" }, 401);
 
-  // الاشتراك من المنصة + عدم إيقاف المدرسة للخدمة
   const { data: active } = await asUser.rpc("whatsapp_active");
   if (!active) return json({ error: "feature_disabled" }, 403);
 
-  // بيانات واتساب الخاصة بالمدرسة (رقمها وحسابها) من الخزنة؛ لا تُرسل من رقم المنصة
   const { data: accountId } = await asUser.rpc("current_account_id");
   const { data: creds } = await admin.rpc("wa_get_credentials", { p_account: accountId });
   const token: string | null = creds?.token ?? null;
@@ -51,12 +57,9 @@ Deno.serve(async (req) => {
   const batchId = String(body.batch_id ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(batchId)) return json({ error: "batch_id غير صالح" }, 400);
 
-  // لا إرسال قبل المراجعة والاعتماد (مفروض أيضاً بمُشغّل في قاعدة البيانات)
   const { data: batch } = await asUser.from("notification_batches").select("status").eq("id", batchId).maybeSingle();
   if (!batch || batch.status !== "approved") return json({ error: "batch_not_approved" }, 409);
 
-  // حجز الصفوف ذرّياً: كل صف يُرسل مرة واحدة حتى لو استُدعيت الدالة مرتين.
-  // الرسائل المعدّلة استثنائياً (بلا قالب معتمد) لا تُرسل تلقائياً؛ تبقى للإرسال اليدوي.
   const { data: claimed, error: claimErr } = await asUser.from("notifications_log")
     .update({ claimed_at: new Date().toISOString() })
     .eq("batch_id", batchId).eq("status", "pending").eq("channel", "whatsapp").eq("included", true).eq("moderation_status", "clean").not("wa_template_name", "is", null).is("claimed_at", null)

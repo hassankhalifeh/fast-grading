@@ -1,5 +1,16 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// Supabase API keys: the new named keys (sb_secret_… / sb_publishable_…, key "default"), falling back to the
+// legacy JWT keys only while those still exist.
+function supabaseKey(namedKeysVar: string, legacyVar: string): string | undefined {
+  try {
+    const k = JSON.parse(Deno.env.get(namedKeysVar) ?? "{}").default;
+    if (typeof k === "string" && k) return k;
+  } catch { /* not provisioned */ }
+  return Deno.env.get(legacyVar);
+}
+
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -8,8 +19,6 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-// حفظ وفحص بيانات واتساب الخاصة بالمدرسة (رقمها وحسابها لدى Meta). تُتحقق من Meta أولاً، ثم تُخزَّن الأسرار في Vault.
-// لا تعيد أي سر للمتصفح. تتطلب اشتراكاً مفعّلاً من المنصة وصلاحية config.manage.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "الطريقة غير مدعومة" }, 405);
@@ -18,8 +27,8 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: "غير مصرّح" }, 401);
 
   const url = Deno.env.get("SUPABASE_URL")!;
-  const asUser = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
-  const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
+  const asUser = createClient(url, supabaseKey("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "fastgrading" } });
+  const admin = createClient(url, supabaseKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false }, db: { schema: "fastgrading" } });
 
   const { data: userData, error: userErr } = await asUser.auth.getUser();
   if (userErr || !userData.user) return json({ error: "جلسة غير صالحة" }, 401);
@@ -47,7 +56,6 @@ Deno.serve(async (req) => {
   if (waba && !/^\d{5,20}$/.test(waba)) return json({ error: "معرّف الحساب (WABA ID) أرقام فقط" }, 400);
   if (!token) return json({ error: "التوكن (Access Token) مطلوب" }, 400);
 
-  // التحقق من Meta قبل حفظ أي شيء
   let display: string | null = null; let name: string | null = null; let failure: string | null = null;
   try {
     const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}?fields=display_phone_number,verified_name`, { headers: { Authorization: `Bearer ${token}` } });
