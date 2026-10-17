@@ -9,7 +9,7 @@ import { useSubscriptionStatus } from "@/lib/useSubscriptionStatus";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History, ShieldAlert, Home, Pin, PinOff,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History, ShieldAlert, Home, Pin, PinOff, CircleHelp,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -33,8 +33,9 @@ import WhatsAppSettingsPanel from "./components/WhatsAppSettingsPanel";
 import WhatsAppHistoryPanel from "./components/WhatsAppHistoryPanel";
 import ModerationPanel from "./components/ModerationPanel";
 import HomePanel from "./components/HomePanel";
+import HelpCenter from "./components/HelpCenter";
 
-type Section = "home" | "moderation" | "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "home" | "help" | "moderation" | "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 // feature = إضافة مدفوعة/اختيارية يفعّلها مالك المنصة للحساب (تظهر فقط عند تفعيلها)
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string; feature?: string }[] = [
@@ -62,7 +63,23 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string; fe
   { id: "whatsappSettings", label: "إعدادات واتساب", icon: Power, capability: "config.manage", feature: "whatsapp_notifications" },
   { id: "moderation", label: "مراجعة المخالفات", icon: ShieldAlert, capability: "config.manage", feature: "whatsapp_history" },
   { id: "whatsappHistory", label: "سجل محادثات واتساب", icon: History, capability: "notifications.send", feature: "whatsapp_history" },
+  { id: "help", label: "المساعدة", icon: CircleHelp },
 ];
+
+// زر «؟» في أعلى كل شاشة: أول مقال متاح للمستخدم من القائمة، ثم النزول إلى أول عنوان يحوي النص المذكور
+const ADMIN_SETUP = { slugs: ["school-admin-guide"], hint: "تهيئة المدرسة" };
+const WHATSAPP_HELP = { slugs: ["school-admin-guide"], hint: "مراسلات أولياء الأمور" };
+const HELP_TOPICS: Partial<Record<Section, { slugs: string[]; hint?: string }>> = {
+  school: ADMIN_SETUP, subjects: ADMIN_SETUP, stages: ADMIN_SETUP, examTypes: ADMIN_SETUP, academic: ADMIN_SETUP, gradingPolicy: ADMIN_SETUP,
+  weights: ADMIN_SETUP, classSections: ADMIN_SETUP, students: ADMIN_SETUP, import: ADMIN_SETUP, exams: ADMIN_SETUP, teachers: ADMIN_SETUP,
+  org: { slugs: ["supervisor-guide", "master-guide"], hint: "فكرة النطاق" },
+  users: { slugs: ["master-guide", "school-admin-guide"], hint: "أين تُمنح الصلاحيات" },
+  permissions: { slugs: ["master-guide", "school-admin-guide"], hint: "أين تُمنح الصلاحيات" },
+  gradeEntry: { slugs: ["teacher-guide", "supervisor-guide"], hint: "إدخال العلامات" },
+  supplementary: { slugs: ["school-admin-guide"], hint: "الإدارة المستمرة" },
+  reports: { slugs: ["school-admin-guide", "supervisor-guide", "teacher-guide"], hint: "مركز التقارير" },
+  notifications: WHATSAPP_HELP, messageTemplates: WHATSAPP_HELP, whatsappSettings: WHATSAPP_HELP, moderation: WHATSAPP_HELP, whatsappHistory: WHATSAPP_HELP,
+};
 
 const SIMPLE_SECTIONS: Partial<Record<Section, { table: string; columns: Column[] }>> = {
   subjects: { table: "subjects", columns: [{ key: "name", label: "اسم المادة" }] },
@@ -124,6 +141,12 @@ export default function DashboardPage() {
   async function setSectionAsDefault(id: Section) {
     setMyDefault(id === "home" ? null : id);
     await supabase.rpc("set_my_default_section", { p_section: id === "home" ? null : id });
+  }
+  const [helpTarget, setHelpTarget] = useState<{ slugs: string[]; hint?: string; n: number } | null>(null);
+  function openHelpFor(id: Section) {
+    const t = HELP_TOPICS[id];
+    setHelpTarget(t ? { ...t, n: Date.now() } : null);
+    setSection("help");
   }
   const contentRef = useRef<HTMLDivElement>(null);
   // عند تغيير الصفحة يبدأ المحتوى من أعلاه، بينما تحتفظ القائمة الجانبية بمكان تمريرها
@@ -254,7 +277,7 @@ export default function DashboardPage() {
           <p style={{ color: "white", fontWeight: 800, fontSize: "1.1rem", margin: 0 }}>Grading SaaS</p>
         </div>
         {visibleSections.map((s) => (
-          <button key={s.id} onClick={() => setSection(s.id)} className={`nav-item ${section === s.id ? "active" : ""}`}>
+          <button key={s.id} onClick={() => { if (s.id === "help") setHelpTarget(null); setSection(s.id); }} className={`nav-item ${section === s.id ? "active" : ""}`}>
             <s.icon size={17} />{s.label}
           </button>
         ))}
@@ -283,6 +306,9 @@ export default function DashboardPage() {
                 {SECTIONS.find((s) => s.id === section)?.label}
               </h2>
               <div style={{ display: "flex", gap: 8 }}>
+                {HELP_TOPICS[section] && (
+                  <button onClick={() => openHelpFor(section)} className="btn btn-secondary" title="مساعدة حول هذه الشاشة" aria-label="مساعدة حول هذه الشاشة" style={{ padding: "6px 10px" }}><CircleHelp size={15} /></button>
+                )}
                 <button onClick={() => setSectionAsDefault(section)} disabled={myDefault === section} className="btn btn-secondary" style={{ fontSize: "0.78rem", padding: "6px 12px", opacity: myDefault === section ? 0.7 : 1 }}>
                   {myDefault === section ? <><Pin size={13} /> صفحتك الافتراضية</> : <><PinOff size={13} /> اجعلها صفحتي الافتراضية</>}
                 </button>
@@ -295,6 +321,7 @@ export default function DashboardPage() {
           </>
         )}
 
+        {section === "help" && <HelpCenter key={helpTarget?.n ?? 0} initialSlugs={helpTarget?.slugs} initialHint={helpTarget?.hint} />}
         {section === "home" && (
           <HomePanel accountId={appUser.account_id} appUser={appUser} capabilities={capabilities} isDefault={myDefault === null} onSetDefault={() => setSectionAsDefault("home")} onNavigate={(id) => setSection(id as Section)} />
         )}
