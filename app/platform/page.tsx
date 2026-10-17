@@ -6,6 +6,94 @@ import { useTableKit } from "@/lib/tablekit";
 
 const MAX_PLATFORM_BG_BYTES = 4 * 1024 * 1024;
 
+interface HelpRow { id: string; slug: string; title: string; summary: string | null; audience: string; sort_order: number; published: boolean; body_md: string; updated_at: string }
+const HELP_AUDIENCE: Record<string, string> = { everyone: "الجميع (أي مستخدم مسجَّل)", school_admin: "الناظر العام ومن يدير الإعدادات/المستخدمين", platform: "مالك المنصة فقط" };
+
+// محتوى المساعدة: يحرّره مالك المنصة هنا فيظهر فوراً للمستخدمين في «المساعدة» (RLS يقرّر من يرى كل مقال).
+function HelpAdminCard() {
+  const [rows, setRows] = useState<HelpRow[]>([]);
+  const [editing, setEditing] = useState<HelpRow | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  function load() {
+    supabase.from("help_articles").select("*").order("sort_order").then(({ data }) => setRows((data ?? []) as HelpRow[]));
+  }
+  useEffect(() => { load(); }, []);
+
+  function startNew() {
+    setIsNew(true); setErr(null); setOk(null);
+    setEditing({ id: "", slug: "", title: "", summary: "", audience: "everyone", sort_order: (rows[rows.length - 1]?.sort_order ?? 0) + 10, published: true, body_md: "# عنوان المقال\n\nاكتب هنا بصيغة Markdown.", updated_at: "" });
+  }
+
+  async function save() {
+    if (!editing) return;
+    setErr(null); setOk(null);
+    if (!editing.title.trim()) return setErr("العنوان مطلوب");
+    if (!editing.body_md.trim()) return setErr("نص المقال مطلوب");
+    if (isNew && !/^[a-z0-9-]{2,60}$/.test(editing.slug)) return setErr("المعرّف (slug) حروف إنجليزية صغيرة وأرقام وشرطة، من 2 إلى 60 خانة");
+    setBusy(true);
+    const payload = { title: editing.title.trim(), summary: editing.summary?.trim() || null, audience: editing.audience, sort_order: Number(editing.sort_order) || 0, published: editing.published, body_md: editing.body_md };
+    const { error } = isNew
+      ? await supabase.from("help_articles").insert({ slug: editing.slug, ...payload })
+      : await supabase.from("help_articles").update(payload).eq("id", editing.id);
+    setBusy(false);
+    if (error) return setErr(error.message.includes("duplicate") ? "هذا المعرّف مستعمل لمقال آخر" : error.message);
+    setOk("حُفظ المقال"); setEditing(null); setIsNew(false); load();
+  }
+
+  return (
+    <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 18 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <h3 style={{ margin: 0, fontSize: "1rem" }}>محتوى المساعدة</h3>
+        {!editing && <button className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "5px 12px" }} onClick={startNew}>+ مقال جديد</button>}
+      </div>
+      <p style={{ fontSize: "0.82rem", color: "var(--steel)" }}>الأدلة التي يراها المستخدمون في «المساعدة» داخل لوحة التحكم. التعديل يظهر فوراً دون نشر نسخة جديدة. المقال غير المنشور لا يراه أحد غيرك.</p>
+      {err && <p style={{ color: "var(--red)", fontSize: "0.85rem" }}>{err}</p>}
+      {ok && <p style={{ color: "var(--green)", fontSize: "0.85rem" }}>{ok}</p>}
+
+      {!editing ? (
+        <table className="data-table" style={{ fontSize: "0.85rem" }}>
+          <thead><tr><th>العنوان</th><th>المعرّف</th><th>الجمهور</th><th>الترتيب</th><th>الحالة</th><th></th></tr></thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td style={{ fontWeight: 700 }}>{r.title}</td><td dir="ltr" style={{ fontFamily: "var(--font-mono)", fontSize: "0.78rem" }}>{r.slug}</td>
+                <td>{HELP_AUDIENCE[r.audience] ?? r.audience}</td><td>{r.sort_order}</td>
+                <td style={{ color: r.published ? "var(--green)" : "var(--steel)" }}>{r.published ? "منشور" : "غير منشور"}</td>
+                <td><button className="btn btn-secondary" style={{ fontSize: "0.75rem", padding: "3px 10px" }} onClick={() => { setIsNew(false); setErr(null); setOk(null); setEditing(r); }}>تعديل</button></td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={6} style={{ color: "var(--steel)" }}>لا توجد مقالات بعد.</td></tr>}
+          </tbody>
+        </table>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <div><label style={lbl}>العنوان</label><input className="input" style={{ width: 280 }} value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} /></div>
+            <div><label style={lbl}>المعرّف (slug)</label><input className="input" dir="ltr" style={{ width: 200 }} value={editing.slug} disabled={!isNew} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} /></div>
+            <div><label style={lbl}>من يراه</label>
+              <select className="input" style={{ width: 280 }} value={editing.audience} onChange={(e) => setEditing({ ...editing, audience: e.target.value })}>
+                {Object.entries(HELP_AUDIENCE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select></div>
+            <div><label style={lbl}>الترتيب</label><input className="input" type="number" style={{ width: 90 }} value={editing.sort_order} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
+            <label style={{ display: "flex", gap: 6, alignItems: "flex-end", fontSize: "0.85rem" }}><input type="checkbox" checked={editing.published} onChange={(e) => setEditing({ ...editing, published: e.target.checked })} /> منشور</label>
+          </div>
+          <div><label style={lbl}>الملخص (يظهر على بطاقة المقال)</label><input className="input" value={editing.summary ?? ""} onChange={(e) => setEditing({ ...editing, summary: e.target.value })} /></div>
+          <div><label style={lbl}>النص (Markdown: # عنوان، **غامق**، - قائمة، 1. قائمة مرقّمة، | جدول |، ```كود```، [نص](help:slug-مقال-آخر))</label>
+            <textarea className="input" rows={18} style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: "0.82rem", lineHeight: 1.6 }} value={editing.body_md} onChange={(e) => setEditing({ ...editing, body_md: e.target.value })} /></div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn btn-gold" disabled={busy} onClick={save}>{busy ? "جارٍ الحفظ..." : "حفظ"}</button>
+            <button className="btn btn-secondary" disabled={busy} onClick={() => { setEditing(null); setIsNew(false); setErr(null); }}>إلغاء</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // خلفية المنصة الافتراضية: تظهر خلف كل صفحات لوحة التحكم لأي حساب لم يضع خلفيته الخاصة.
 function PlatformBackgroundCard() {
   const [path, setPath] = useState<string | null>(null);
@@ -226,6 +314,7 @@ export default function PlatformPage() {
       {message && <p style={{ color: "var(--green)" }}>{message}</p>}
 
       <PlatformBackgroundCard />
+      <HelpAdminCard />
 
       <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 18 }}>
         <h3 style={{ marginTop: 0, fontSize: "1rem" }}>إنشاء حساب جديد</h3>
