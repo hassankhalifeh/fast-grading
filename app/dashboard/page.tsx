@@ -34,6 +34,7 @@ import WhatsAppHistoryPanel from "./components/WhatsAppHistoryPanel";
 import ModerationPanel from "./components/ModerationPanel";
 import HomePanel from "./components/HomePanel";
 import HelpCenter from "./components/HelpCenter";
+import NotificationBell from "./components/NotificationBell";
 
 type Section = "home" | "help" | "moderation" | "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
@@ -275,6 +276,7 @@ export default function DashboardPage() {
             <GraduationCap size={17} color="white" />
           </div>
           <p style={{ color: "white", fontWeight: 800, fontSize: "1.1rem", margin: 0 }}>Grading SaaS</p>
+          <NotificationBell onNavigate={(id) => setSection(id as Section)} />
         </div>
         {visibleSections.map((s) => (
           <button key={s.id} onClick={() => { if (s.id === "help") setHelpTarget(null); setSection(s.id); }} className={`nav-item ${section === s.id ? "active" : ""}`}>

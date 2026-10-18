@@ -143,6 +143,41 @@ begin
   r := r || format(E'%s T5b year ranks start at 1 (%s invalid)\n', case when n = 0 then 'PASS' else 'FAIL' end, n);
   if n <> 0 then fails := fails + 1; end if;
 
+  -- ---------- T6: in-app notification center (requires migration 55) ----------
+  perform fastgrading.notify_user(accA, tch, 'test', 'tests: for teacher', null, null);
+  perform fastgrading.notify_user(accA, cfg, 'test', 'tests: for config manager', null, null);
+  perform set_config('request.jwt.claims', json_build_object('sub', tchu, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from fastgrading.app_notifications;
+  r := r || format(E'%s T6a a user sees only their own notifications (%s)\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
+  if n <> 1 then fails := fails + 1; end if;
+  begin
+    insert into fastgrading.app_notifications(account_id, user_id, kind, title) values (accA, tch, 'test', 'forged');
+    r := r || E'FAIL T6b a user can insert notifications\n'; fails := fails + 1;
+  exception when insufficient_privilege then
+    r := r || E'PASS T6b a user cannot insert notifications\n';
+  end;
+  begin
+    update fastgrading.app_notifications set title = 'changed';
+    r := r || E'FAIL T6c a user can edit notification text\n'; fails := fails + 1;
+  exception when insufficient_privilege then
+    r := r || E'PASS T6c a user can only change read_at, not the text\n';
+  end;
+  update fastgrading.app_notifications set read_at = now();
+  get diagnostics n = row_count;
+  r := r || format(E'%s T6d a user can mark their own notification read (%s row)\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
+  if n <> 1 then fails := fails + 1; end if;
+  execute 'reset role';
+  begin
+    insert into fastgrading.teaching_assignment_requests(account_id, class_section_id, subject_id, teacher_id, requested_by, reason)
+      select accA, cs.id, s.id, tch, cfg, 'tests' from fastgrading.class_sections cs join fastgrading.subjects s on s.account_id = cs.account_id where cs.account_id = accA limit 1;
+    select count(*) into n from fastgrading.app_notifications where user_id = ownerA and kind = 'assignment_request';
+    r := r || format(E'%s T6e a new second-teacher request notifies the approvers (%s)\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
+    if n <> 1 then fails := fails + 1; end if;
+  exception when others then
+    r := r || format(E'SKIP T6e could not create the request fixture (%s)\n', sqlerrm);
+  end;
+
   r := r || format(E'%s\n', case when fails = 0 then 'VERDICT: ALL PASS (nothing was committed)' else 'VERDICT: ' || fails || ' FAILED (nothing was committed)' end);
   raise exception E'\n%', r;
 end $t$;
