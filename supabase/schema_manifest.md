@@ -1,18 +1,18 @@
 # Schema manifest — fastgrading (production baseline)
 
-Recorded 2026-10-18 from Supabase project `xttdqktojkfbpombkkdp`, schema `fastgrading`, after migration 53.
+Recorded 2026-10-18 from Supabase project `xttdqktojkfbpombkkdp`, schema `fastgrading`, after migration 55.
 Produced by the summary form of [`tools/schema_manifest.sql`](../tools/schema_manifest.sql).
 
 | kind       |   n | hash                               |
 |------------|----:|------------------------------------|
-| constraint | 249 | `53c9205d6e02a710996173bd63e4fcaf` |
+| constraint | 252 | `69de6e7767d105dfb953529f3d856748` |
 | enum       |  20 | `cf75966bbb661ce626e87d6c2a87971d` |
-| function   |  94 | `f6a0c15143a72dd4b35f921e7141a596` |
-| grant      |  95 | `9bfcd11c9b9a454dd37801ddd160cfaf` |
-| index      | 162 | `45c1ad02e516f734108125a0d3d8f3ed` |
-| policy     | 160 | `9c910cfc39732df3d1711af6a5c60090` |
-| table      |  60 | `0b7da72f6e18a4edc36082045e28531b` |
-| trigger    |  27 | `f8d6e71e65354089485a387e9a6676a5` |
+| function   | 103 | `98a897a5347d09087a54e1bde088634b` |
+| grant      |  97 | `90dfeb9e566661119ceffd8682d6d5b7` |
+| index      | 165 | `9de43174b633fd4b978afb3a9fb6050b` |
+| policy     | 163 | `0272bf34db4817639eb31de6a5cc9eaf` |
+| table      |  61 | `e275502841935382ddf2499ba40282a0` |
+| trigger    |  33 | `1e732de6cb7b5be44969990a1c5ccb89` |
 | view       |  13 | `d43f445e37f672440272665c630249f7` |
 
 ## How to use it (parity gate)
