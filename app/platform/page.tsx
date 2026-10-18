@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useTableKit } from "@/lib/tablekit";
 import PlansAdminCard, { type Plan } from "./PlansAdminCard";
 import ApplicationsCard, { type Application } from "./ApplicationsCard";
+import AiAssistantCard from "./AiAssistantCard";
 
 const MAX_PLATFORM_BG_BYTES = 4 * 1024 * 1024;
 
@@ -168,7 +169,7 @@ interface School { id: string; display_name: string; account_type: "solo_teacher
 interface Viol { id: string; school: string; occurred_at: string; user_name: string | null; context: string; student_name: string | null; matched_terms: string[]; categories: string[]; excerpt: string | null; review_status: string; reviewed_by_name: string | null; review_note: string | null }
 interface GTerm { id: string; term: string; category: string; kind: string }
 
-const FEATURE_LABEL: Record<string, string> = { whatsapp_notifications: "مراسلات واتساب" };
+const FEATURE_LABEL: Record<string, string> = { whatsapp_notifications: "مراسلات واتساب", ai_assistant: "مساعد الذكاء الاصطناعي" };
 const CAT: Record<string, string> = { sexual: "خادش للحياء", profanity: "ألفاظ نابية", insult: "إهانة", threat: "تهديد", other: "أخرى" };
 const TYPE_LABEL: Record<string, string> = { solo_teacher: "فردي (معلّم مستقل)", school_enterprise: "مدرسة" };
 const SUB_STATUS: Record<string, { label: string; color: string }> = {
@@ -366,6 +367,7 @@ export default function PlatformPage() {
       <PlatformBackgroundCard />
       <HelpAdminCard />
       <PlansAdminCard plans={plans} features={features} featureLabel={FEATURE_LABEL} onChanged={loadPlans} />
+      <AiAssistantCard />
 
       <div id="create-account" className="card" style={{ padding: "1rem 1.1rem", marginBottom: 18 }}>
         <h3 style={{ marginTop: 0, fontSize: "1rem" }}>إنشاء حساب جديد</h3>

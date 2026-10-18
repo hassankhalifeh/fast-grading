@@ -36,6 +36,7 @@ import HomePanel from "./components/HomePanel";
 import HelpCenter from "./components/HelpCenter";
 import RolloverPanel from "./components/RolloverPanel";
 import NotificationBell from "./components/NotificationBell";
+import AssistantLauncher from "./components/AssistantLauncher";
 
 type Section = "home" | "help" | "rollover" | "moderation" | "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
@@ -280,6 +281,7 @@ export default function DashboardPage() {
 
   return (
     <div className="app-shell">
+      <AssistantLauncher userId={appUser?.id} />
       {backgroundUrl && (
         <div aria-hidden style={{
           position: "fixed", inset: 0, zIndex: -1,
