@@ -143,6 +143,12 @@ begin
   r := r || format(E'%s T5b year ranks start at 1 (%s invalid)\n', case when n = 0 then 'PASS' else 'FAIL' end, n);
   if n <> 0 then fails := fails + 1; end if;
 
+  -- ---------- T6: in-app notification center (requires migration 55) ----------
+  perform fastgrading.notify_user(accA, tch, 'test', 'tests: for teacher', null, null);
+  perform fastgrading.notify_user(accA, cfg, 'test', 'tests: for config manager', null, null);
+  perform set_config('request.jwt.claims', json_build_object('sub', tchu, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from fastgrading.app_notifications;
   r := r || format(E'%s\n', case when fails = 0 then 'VERDICT: ALL PASS (nothing was committed)' else 'VERDICT: ' || fails || ' FAILED (nothing was committed)' end);
   raise exception E'\n%', r;
 end $t$;
