@@ -323,7 +323,7 @@ export default function DashboardPage() {
 
         {section === "help" && <HelpCenter key={helpTarget?.n ?? 0} initialSlugs={helpTarget?.slugs} initialHint={helpTarget?.hint} />}
         {section === "home" && (
-          <HomePanel accountId={appUser.account_id} appUser={appUser} capabilities={capabilities} isDefault={myDefault === null} onSetDefault={() => setSectionAsDefault("home")} onNavigate={(id) => setSection(id as Section)} />
+          <HomePanel accountId={appUser.account_id} appUser={appUser} capabilities={capabilities} features={features} isDefault={myDefault === null} onSetDefault={() => setSectionAsDefault("home")} onNavigate={(id) => setSection(id as Section)} />
         )}
         {section === "gradingPolicy" && <GradingPolicyPanel accountId={appUser.account_id} />}
         {section === "teachers" && (
