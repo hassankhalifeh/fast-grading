@@ -143,6 +143,13 @@ export default function DashboardPage() {
     setMyDefault(id === "home" ? null : id);
     await supabase.rpc("set_my_default_section", { p_section: id === "home" ? null : id });
   }
+  const [pendingApps, setPendingApps] = useState(0);
+  // مالك المنصة: عدّاد طلبات فتح الحساب المعلّقة بجانب «لوحة المنصة»
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+    supabase.from("account_applications").select("id", { count: "exact", head: true }).eq("status", "pending")
+      .then(({ count, error }) => setPendingApps(error ? 0 : count ?? 0));
+  }, [isPlatformAdmin]);
   const [helpTarget, setHelpTarget] = useState<{ slugs: string[]; hint?: string; n: number } | null>(null);
   function openHelpFor(id: Section) {
     const t = HELP_TOPICS[id];
@@ -284,7 +291,7 @@ export default function DashboardPage() {
           </button>
         ))}
         {isPlatformAdmin && (
-          <a href="/platform" className="nav-item" style={{ textDecoration: "none", marginTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)" }}><Shield size={17} />لوحة المنصة</a>
+          <a href="/platform" className="nav-item" style={{ textDecoration: "none", marginTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)" }}><Shield size={17} />لوحة المنصة{pendingApps > 0 && <span style={{ marginInlineStart: "auto", background: "var(--red)", color: "white", borderRadius: 9, padding: "0 7px", fontSize: "0.72rem", fontWeight: 800 }} title="طلبات فتح حساب بانتظار القرار">{pendingApps}</span>}</a>
         )}
       </nav>
 

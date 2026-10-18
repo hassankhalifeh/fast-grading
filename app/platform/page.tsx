@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useTableKit } from "@/lib/tablekit";
 import PlansAdminCard, { type Plan } from "./PlansAdminCard";
+import ApplicationsCard, { type Application } from "./ApplicationsCard";
 
 const MAX_PLATFORM_BG_BYTES = 4 * 1024 * 1024;
 
@@ -205,6 +206,8 @@ export default function PlatformPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [createPlan, setCreatePlan] = useState("");
   const [applyPlanKey, setApplyPlanKey] = useState("");
+  const [fromApp, setFromApp] = useState<Application | null>(null);
+  const [appsKey, setAppsKey] = useState(0);
 
   // تحرير حساب قائم
   const [editing, setEditing] = useState<string | null>(null);
@@ -276,6 +279,16 @@ export default function PlatformPage() {
     setMessage(`طُبّقت باقة «${p.name_ar}»`); setEditing(null); setApplyPlanKey(""); load();
   }
 
+  // اعتماد طلب فتح حساب: يملأ النموذج بالبيانات (قابلة للتعديل) ثم يُعلَّم الطلب معتمداً بعد نجاح الإنشاء
+  function approveApplication(a: Application) {
+    setFromApp(a); setError(null); setMessage(null);
+    setAccountType(a.account_type); setName(a.org_name); setAdminName(a.contact_name); setAdminEmail(a.email);
+    setTimeout(() => {
+      if (a.plan_key && plans.some((p) => p.key === a.plan_key && p.is_active)) choosePlan(a.plan_key);
+      document.getElementById("create-account")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
+
   async function createAccount() {
     setError(null); setMessage(null); setBusy(true);
     const { data, error: e } = await supabase.functions.invoke("fastgrading-platform-admin", {
@@ -286,7 +299,13 @@ export default function PlatformPage() {
     });
     setBusy(false);
     if (e || data?.error) return setError(data?.error ?? e?.message ?? "تعذّر الإنشاء");
-    setMessage(data.message); setName(""); setAdminName(""); setAdminEmail(""); setWithFeatures([]); setExpiresAt(""); setPlanType(""); load();
+    setMessage(data.message); setName(""); setAdminName(""); setAdminEmail(""); setWithFeatures([]); setExpiresAt(""); setPlanType(""); setCreatePlan(""); load();
+    if (fromApp) {
+      const { error: upErr } = await supabase.from("account_applications")
+        .update({ status: "approved", decided_at: new Date().toISOString(), created_account_id: data.account_id ?? null }).eq("id", fromApp.id);
+      if (upErr) setError("أُنشئ الحساب لكن تعذّر تعليم الطلب معتمداً: " + upErr.message);
+      setFromApp(null); setAppsKey((k) => k + 1);
+    }
   }
   async function toggle(s: School, key: string) {
     const on = !s.enabled_features.includes(key);
@@ -343,12 +362,19 @@ export default function PlatformPage() {
       {error && <p style={{ color: "var(--red)" }}>{error}</p>}
       {message && <p style={{ color: "var(--green)" }}>{message}</p>}
 
+      <ApplicationsCard reloadKey={appsKey} planName={planName} onApprove={approveApplication} />
       <PlatformBackgroundCard />
       <HelpAdminCard />
       <PlansAdminCard plans={plans} features={features} featureLabel={FEATURE_LABEL} onChanged={loadPlans} />
 
-      <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 18 }}>
+      <div id="create-account" className="card" style={{ padding: "1rem 1.1rem", marginBottom: 18 }}>
         <h3 style={{ marginTop: 0, fontSize: "1rem" }}>إنشاء حساب جديد</h3>
+        {fromApp && (
+          <p style={{ background: "#fff6e0", border: "1px solid var(--gold)", borderRadius: 8, padding: "6px 12px", fontSize: "0.85rem", margin: "0 0 12px" }}>
+            إنشاء حساب من طلب «{fromApp.org_name}»: راجع البيانات والحدود ثم أنشئ؛ سيُعلَّم الطلب معتمداً تلقائياً.{" "}
+            <button type="button" onClick={() => setFromApp(null)} style={{ background: "none", border: "none", color: "var(--indigo)", cursor: "pointer", textDecoration: "underline", font: "inherit" }}>إلغاء الربط بالطلب</button>
+          </p>
+        )}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div><label style={lbl}>نوع الحساب</label>
             <select className="input" value={accountType} onChange={(e) => setAccountType(e.target.value as any)}>
