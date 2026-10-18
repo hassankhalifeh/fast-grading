@@ -9,7 +9,7 @@ import { useSubscriptionStatus } from "@/lib/useSubscriptionStatus";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History, ShieldAlert, Home, Pin, PinOff, CircleHelp,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History, ShieldAlert, Home, Pin, PinOff, CircleHelp, CalendarClock,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -34,9 +34,10 @@ import WhatsAppHistoryPanel from "./components/WhatsAppHistoryPanel";
 import ModerationPanel from "./components/ModerationPanel";
 import HomePanel from "./components/HomePanel";
 import HelpCenter from "./components/HelpCenter";
+import RolloverPanel from "./components/RolloverPanel";
 import NotificationBell from "./components/NotificationBell";
 
-type Section = "home" | "help" | "moderation" | "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
+type Section = "home" | "help" | "rollover" | "moderation" | "whatsappHistory" | "whatsappSettings" | "school" | "messageTemplates" | "notifications" | "subjects" | "stages" | "examTypes" | "academic" | "weights" | "teachers" | "users" | "org" | "import" | "supplementary" | "gradingPolicy" | "classSections" | "students" | "exams" | "gradeEntry" | "permissions" | "reports";
 
 // feature = إضافة مدفوعة/اختيارية يفعّلها مالك المنصة للحساب (تظهر فقط عند تفعيلها)
 const SECTIONS: { id: Section; label: string; icon: any; capability?: string; feature?: string }[] = [
@@ -58,6 +59,7 @@ const SECTIONS: { id: Section; label: string; icon: any; capability?: string; fe
   { id: "users", label: "المستخدمون", icon: UserPlus, capability: "users.manage" },
   { id: "permissions", label: "الصلاحيات", icon: ShieldCheck, capability: "users.manage" },
   { id: "supplementary", label: "الامتحان التكميلي", icon: LifeBuoy, capability: "supplementary.manage" },
+  { id: "rollover", label: "ترحيل السنة", icon: CalendarClock, capability: "roster.manage" },
   { id: "reports", label: "مركز التقارير", icon: BarChart3, capability: "reports.view" },
   { id: "notifications", label: "مراسلات أولياء الأمور", icon: MessageCircle, capability: "notifications.send", feature: "whatsapp_active" },
   { id: "messageTemplates", label: "قوالب الرسائل", icon: MessageSquare, capability: "config.manage", feature: "whatsapp_active" },
@@ -78,6 +80,7 @@ const HELP_TOPICS: Partial<Record<Section, { slugs: string[]; hint?: string }>> 
   permissions: { slugs: ["master-guide", "school-admin-guide"], hint: "أين تُمنح الصلاحيات" },
   gradeEntry: { slugs: ["teacher-guide", "supervisor-guide"], hint: "إدخال العلامات" },
   supplementary: { slugs: ["school-admin-guide"], hint: "الإدارة المستمرة" },
+  rollover: { slugs: ["school-admin-guide"], hint: "ترحيل السنة" },
   reports: { slugs: ["school-admin-guide", "supervisor-guide", "teacher-guide"], hint: "مركز التقارير" },
   notifications: WHATSAPP_HELP, messageTemplates: WHATSAPP_HELP, whatsappSettings: WHATSAPP_HELP, moderation: WHATSAPP_HELP, whatsappHistory: WHATSAPP_HELP,
 };
@@ -330,6 +333,7 @@ export default function DashboardPage() {
           </>
         )}
 
+        {section === "rollover" && <RolloverPanel accountId={appUser.account_id} appUser={appUser} capabilities={capabilities} />}
         {section === "help" && <HelpCenter key={helpTarget?.n ?? 0} initialSlugs={helpTarget?.slugs} initialHint={helpTarget?.hint} />}
         {section === "home" && (
           <HomePanel accountId={appUser.account_id} appUser={appUser} capabilities={capabilities} features={features} isDefault={myDefault === null} onSetDefault={() => setSectionAsDefault("home")} onNavigate={(id) => setSection(id as Section)} />
