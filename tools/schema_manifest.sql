@@ -3,7 +3,7 @@
 -- Wrap it in the summary below to get one hash per kind (the checked-in baseline in supabase/schema_manifest.md),
 -- or run it as is and diff two environments row by row when a hash differs.
 --
--- Covers: tables+columns, constraints, indexes, RLS flag, policies, functions (full definition incl. search_path),
+-- Covers: tables+columns, constraints, indexes, RLS flag, policies, functions (full definition incl. search_path and execute privileges),
 -- triggers, views (definition + reloptions such as security_invoker), enums, table grants.
 -- Extension-owned objects (pg_trgm lives in this schema) are excluded.
 
@@ -32,7 +32,7 @@ pol as (
   from pg_policies p cross join s where p.schemaname = s.nsp
 ),
 fn as (
-  select 'function', p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', md5(pg_get_functiondef(p.oid))
+  select 'function', p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', md5(pg_get_functiondef(p.oid) || ':acl=' || coalesce(p.proacl::text, ''))
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace cross join s
   where n.nspname = s.nsp and p.prokind in ('f', 'p')
     and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
