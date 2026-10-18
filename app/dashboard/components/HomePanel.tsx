@@ -31,7 +31,7 @@ export default function HomePanel({ accountId, appUser, capabilities, features, 
       .then(({ data }) => setSchoolName(data?.display_name ?? ""));
     Promise.all([
       supabase.from("students").select("id", { count: "exact", head: true }).eq("account_id", accountId),
-      supabase.from("class_sections").select("id", { count: "exact", head: true }).eq("account_id", accountId),
+      supabase.from("class_sections").select("id", { count: "exact", head: true }).eq("account_id", accountId).eq("is_active", true),
       supabase.from("exams").select("id", { count: "exact", head: true }).eq("account_id", accountId).eq("grading_window_open", true),
     ]).then(([s, c, e]) => setCounts({ students: s.count ?? 0, classes: c.count ?? 0, openExams: e.count ?? 0 }));
     // ما يحتاج انتباهك: فشل أي نداء (مثلاً قبل تطبيق الترحيل 54) يُخفي القسم فقط ولا يكسر الصفحة
