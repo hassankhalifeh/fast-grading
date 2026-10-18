@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useTableKit } from "@/lib/tablekit";
+import PlansAdminCard, { type Plan } from "./PlansAdminCard";
 
 const MAX_PLATFORM_BG_BYTES = 4 * 1024 * 1024;
 
@@ -201,6 +202,9 @@ export default function PlatformPage() {
   const [expiresAt, setExpiresAt] = useState("");
   const [limits, setLimits] = useState<Limits>(SCHOOL_DEFAULTS);
   const [planType, setPlanType] = useState("");
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [createPlan, setCreatePlan] = useState("");
+  const [applyPlanKey, setApplyPlanKey] = useState("");
 
   // تحرير حساب قائم
   const [editing, setEditing] = useState<string | null>(null);
@@ -242,9 +246,35 @@ export default function PlatformPage() {
     if (e || data?.error) return setError(data?.error ?? e?.message ?? "تعذّر التنفيذ");
     setError(null); setGTerm(""); loadTerms();
   }
-  useEffect(() => { load(); loadViols(); }, []);
+  async function loadPlans() {
+    const { data } = await supabase.from("plans").select("*").order("sort_order");
+    setPlans((data ?? []) as Plan[]);
+  }
+  useEffect(() => { load(); loadViols(); loadPlans(); }, []);
   useEffect(() => { loadViols(vFilter); }, [vFilter]);
-  useEffect(() => { setLimits(accountType === "solo_teacher" ? SOLO_DEFAULTS : SCHOOL_DEFAULTS); }, [accountType]);
+  useEffect(() => { setLimits(accountType === "solo_teacher" ? SOLO_DEFAULTS : SCHOOL_DEFAULTS); setCreatePlan(""); }, [accountType]);
+
+  // اختيار باقة عند إنشاء حساب يملأ الحدود والإضافات والانتهاء والاسم، وتبقى كلها قابلة للتعديل قبل الإنشاء
+  function choosePlan(key: string) {
+    setCreatePlan(key);
+    const p = plans.find((x) => x.key === key);
+    if (!p) return;
+    setLimits({ max_classes: p.class_limit, max_students_per_class: p.students_per_class, max_total_students: p.total_students, max_buildings: p.max_buildings, max_stages: p.max_stages });
+    setWithFeatures(p.features.filter((f) => features.includes(f)));
+    setPlanType(p.key);
+    setExpiresAt(p.duration_days ? new Date(Date.now() + p.duration_days * 86400000).toISOString().slice(0, 10) : "");
+  }
+  const planName = (key: string | null | undefined) => (key ? plans.find((p) => p.key === key)?.name_ar ?? key : "—");
+  async function applyPlan(accountId: string) {
+    const p = plans.find((x) => x.key === applyPlanKey);
+    if (!p) return;
+    if (!window.confirm(`تطبيق باقة «${p.name_ar}» على هذا الحساب؟ ستُستبدل حدوده وتاريخ انتهائه، ويُصفَّر أي تمديد منحتَه سابقاً، وتُفعَّل إضافات الباقة.`)) return;
+    setBusy(true); setError(null); setMessage(null);
+    const { error: e } = await supabase.rpc("apply_plan_to_account", { p_account: accountId, p_plan: p.key, p_keep_expiry: false });
+    setBusy(false);
+    if (e) return setError(e.message);
+    setMessage(`طُبّقت باقة «${p.name_ar}»`); setEditing(null); setApplyPlanKey(""); load();
+  }
 
   async function createAccount() {
     setError(null); setMessage(null); setBusy(true);
@@ -315,6 +345,7 @@ export default function PlatformPage() {
 
       <PlatformBackgroundCard />
       <HelpAdminCard />
+      <PlansAdminCard plans={plans} features={features} featureLabel={FEATURE_LABEL} onChanged={loadPlans} />
 
       <div className="card" style={{ padding: "1rem 1.1rem", marginBottom: 18 }}>
         <h3 style={{ marginTop: 0, fontSize: "1rem" }}>إنشاء حساب جديد</h3>
@@ -331,7 +362,12 @@ export default function PlatformPage() {
           <div><label style={lbl}>البريد (تصله دعوة)</label><input className="input" dir="ltr" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} /></div>
           <div><label style={lbl}>تنتهي الصلاحية في</label>
             <input className="input" type="date" style={{ width: 150 }} value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} /></div>
-          <div><label style={lbl}>اسم الباقة (اختياري)</label><input className="input" style={{ width: 160 }} value={planType} placeholder="مثلاً: سنوي 50 طالباً" onChange={(e) => setPlanType(e.target.value)} /></div>
+          <div><label style={lbl}>الباقة</label>
+            <select className="input" value={createPlan} onChange={(e) => choosePlan(e.target.value)}>
+              <option value="">— مخصّص —</option>
+              {plans.filter((p) => p.is_active && (!p.account_type || p.account_type === accountType)).map((p) => <option key={p.key} value={p.key}>{p.name_ar}</option>)}
+            </select></div>
+          <div><label style={lbl}>اسم الباقة (اختياري)</label><input className="input" style={{ width: 160 }} value={planType} placeholder="مثلاً: سنوي 50 طالباً" onChange={(e) => { setPlanType(e.target.value); setCreatePlan(""); }} /></div>
         </div>
 
         <p style={{ fontSize: "0.8rem", fontWeight: 700, margin: "14px 0 6px" }}>الحدود المسموحة لهذا الحساب</p>
@@ -374,6 +410,7 @@ export default function PlatformPage() {
                       {s.subscription && (
                         <div style={{ color: "var(--steel)" }}>
                           {fmtDate(s.subscription.expires_at)}{s.subscription.days_left !== null && s.subscription.days_left >= 0 && ` (${s.subscription.days_left} يوم)`}
+                          <br />الباقة: {planName(s.subscription.plan_type)}
                           <br />صفوف {s.subscription.usage.classes}/{s.subscription.limits.max_classes}
                         </div>
                       )}
@@ -401,6 +438,14 @@ export default function PlatformPage() {
                           <div><label style={lbl}>اسم الباقة</label><input className="input" style={{ width: 160 }} value={editPlan} onChange={(e) => setEditPlan(e.target.value)} /></div>
                           <div><label style={lbl}>ملاحظة داخلية</label><input className="input" style={{ width: 200 }} value={editNote} onChange={(e) => setEditNote(e.target.value)} /></div>
                           <button className="btn btn-gold" disabled={busy} onClick={() => saveEdit(s.id)}>حفظ</button>
+                        </div>
+                        <div style={{ padding: "0 4px 8px", display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
+                          <div><label style={lbl}>تطبيق باقة جاهزة بدل التعديل اليدوي</label>
+                            <select className="input" value={applyPlanKey} onChange={(e) => setApplyPlanKey(e.target.value)}>
+                              <option value="">— اختر باقة —</option>
+                              {plans.filter((p) => p.is_active && (!p.account_type || p.account_type === s.account_type)).map((p) => <option key={p.key} value={p.key}>{p.name_ar}</option>)}
+                            </select></div>
+                          <button className="btn btn-secondary" disabled={busy || !applyPlanKey} onClick={() => applyPlan(s.id)}>تطبيق الباقة</button>
                         </div>
                         <p style={{ margin: "0 0 8px 4px", fontSize: "0.75rem", color: "var(--steel)" }}>اترك «تنتهي الصلاحية» فارغاً لحساب بلا تاريخ انتهاء. تُفرض الحدود فوراً في قاعدة البيانات لكل عمليات الحساب اللاحقة.</p>
                       </td>
