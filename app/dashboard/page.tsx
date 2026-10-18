@@ -9,7 +9,7 @@ import { useSubscriptionStatus } from "@/lib/useSubscriptionStatus";
 import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen, Layers, ListChecks, Settings, GraduationCap, Users,
-  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History, ShieldAlert, Home, Pin, PinOff, CircleHelp, CalendarClock,
+  FileText, PencilLine, ShieldCheck, BarChart3, CalendarRange, Scale, UserCheck, UserPlus, Building2, Upload, LifeBuoy, MessageCircle, Info, MessageSquare, Shield, Power, History, ShieldAlert, Home, Pin, PinOff, CircleHelp, CalendarClock, Menu,
 } from "lucide-react";
 import SimpleTable, { Column } from "./components/SimpleTable";
 import AddEntityModal, { FieldConfig } from "./components/AddEntityModal";
@@ -147,6 +147,13 @@ export default function DashboardPage() {
     await supabase.rpc("set_my_default_section", { p_section: id === "home" ? null : id });
   }
   const [pendingApps, setPendingApps] = useState(0);
+  const [navOpen, setNavOpen] = useState(false);   // درج القائمة في وضع الجوال
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setNavOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [navOpen]);
   // مالك المنصة: عدّاد طلبات فتح الحساب المعلّقة بجانب «لوحة المنصة»
   useEffect(() => {
     if (!isPlatformAdmin) return;
@@ -272,7 +279,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100dvh", overflow: "hidden" }}>
+    <div className="app-shell">
       {backgroundUrl && (
         <div aria-hidden style={{
           position: "fixed", inset: 0, zIndex: -1,
@@ -280,16 +287,22 @@ export default function DashboardPage() {
           backgroundSize: "cover", backgroundPosition: "center",
         }} />
       )}
-      <nav style={{ width: 235, background: backgroundUrl ? "rgba(44,52,84,0.93)" : "var(--indigo)", padding: "1.5rem 0", flexShrink: 0, overflowY: "auto", height: "100%" }}>
+      <div className={`app-backdrop ${navOpen ? "open" : ""}`} onClick={() => setNavOpen(false)} aria-hidden />
+      <header className="app-topbar">
+        <button type="button" className="app-menu-btn" onClick={() => setNavOpen(true)} aria-label="القائمة"><Menu size={21} /></button>
+        <span className="app-topbar-title">{SECTIONS.find((s) => s.id === section)?.label ?? "Grading SaaS"}</span>
+        <NotificationBell placement="bar" onNavigate={(id) => setSection(id as Section)} />
+      </header>
+      <nav className={`app-nav ${navOpen ? "open" : ""}`} style={{ background: backgroundUrl ? "rgba(44,52,84,0.93)" : "var(--indigo)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 1.25rem", marginBottom: 22 }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--gold)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <GraduationCap size={17} color="white" />
           </div>
           <p style={{ color: "white", fontWeight: 800, fontSize: "1.1rem", margin: 0 }}>Grading SaaS</p>
-          <NotificationBell onNavigate={(id) => setSection(id as Section)} />
+          <NotificationBell placement="nav" onNavigate={(id) => setSection(id as Section)} />
         </div>
         {visibleSections.map((s) => (
-          <button key={s.id} onClick={() => { if (s.id === "help") setHelpTarget(null); setSection(s.id); }} className={`nav-item ${section === s.id ? "active" : ""}`}>
+          <button key={s.id} onClick={() => { if (s.id === "help") setHelpTarget(null); setSection(s.id); setNavOpen(false); }} className={`nav-item ${section === s.id ? "active" : ""}`}>
             <s.icon size={17} />{s.label}
           </button>
         ))}
@@ -298,8 +311,8 @@ export default function DashboardPage() {
         )}
       </nav>
 
-      <div ref={contentRef} style={{ flex: 1, minWidth: 0, height: "100%", overflowY: "auto" }}>
-      <main className="fade-in" style={{ padding: "1.75rem", maxWidth: 1100 }}>
+      <div ref={contentRef} className="app-content">
+      <main className="fade-in app-main" style={{ padding: "1.75rem", maxWidth: 1100 }}>
         {sub && (sub.status === "suspended" || (sub.days_left !== null && sub.days_left <= 14)) && (
           <div style={{
             background: sub.status === "suspended" || (sub.days_left ?? 99) < 0 ? "#fde8e8" : "#fff6e0",

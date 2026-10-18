@@ -10,7 +10,17 @@ const POLL_MS = 60_000;
 
 // جرس الإشعارات: صندوق وارد شخصي (app_notifications) تكتبه التريغرات ويقرؤه صاحبه فقط.
 // يُحدَّث كل دقيقة وعند عودة التبويب للواجهة. النقر على إشعار يعلّمه مقروءاً ويفتح القسم المرتبط به.
-export default function NotificationBell({ onNavigate }: { onNavigate: (section: string) => void }) {
+export default function NotificationBell({ onNavigate, placement = "nav" }: { onNavigate: (section: string) => void; placement?: "nav" | "bar" }) {
+  // نسخة واحدة فقط تعمل في كل وضع: الشريط الجانبي على الحاسوب، والشريط العلوي على الجوال (فلا استعلام مكرَّر)
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const sync = () => setMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  const active = placement === "bar" ? mobile : !mobile;
   const [items, setItems] = useState<Item[]>([]);
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -25,12 +35,13 @@ export default function NotificationBell({ onNavigate }: { onNavigate: (section:
   }, []);
 
   useEffect(() => {
+    if (!active) return;
     load();
     const timer = setInterval(load, POLL_MS);
     const onVisible = () => { if (document.visibilityState === "visible") load(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", onVisible); };
-  }, [load]);
+  }, [load, active]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +50,7 @@ export default function NotificationBell({ onNavigate }: { onNavigate: (section:
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  if (failed) return null;
+  if (failed || !active) return null;
   const unread = items.filter((i) => !i.read_at).length;
 
   async function markRead(ids: string[]) {
@@ -70,7 +81,9 @@ export default function NotificationBell({ onNavigate }: { onNavigate: (section:
       </button>
 
       {open && (
-        <div className="card" style={{ position: "fixed", top: 58, right: 248, width: 360, maxWidth: "calc(100vw - 270px)", maxHeight: "70vh", overflowY: "auto", zIndex: 50, padding: 0, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }}>
+        <div className="card" style={placement === "bar"
+          ? { position: "fixed", top: 58, left: 8, right: 8, maxHeight: "70vh", overflowY: "auto", zIndex: 70, padding: 0, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }
+          : { position: "fixed", top: 58, right: 248, width: 360, maxWidth: "calc(100vw - 270px)", maxHeight: "70vh", overflowY: "auto", zIndex: 50, padding: 0, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }}>
           <div style={{ display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid var(--fog)", position: "sticky", top: 0, background: "var(--white, #fff)" }}>
             <strong style={{ color: "var(--indigo)", fontSize: "0.95rem" }}>الإشعارات</strong>
             {unread > 0 && (
