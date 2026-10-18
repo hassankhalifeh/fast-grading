@@ -266,7 +266,7 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
             }}
           />
           {tk.toolbar}
-          <div className="card fade-in" style={{ overflow: "hidden", marginBottom: 14 }}>
+          <div className="card fade-in" style={{ overflowX: "auto", marginBottom: 14 }}>
             <table className="data-table">
               <thead>
                 <tr>
@@ -283,7 +283,7 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
                       const changed = existing[k] !== undefined && scores[k] !== undefined && scores[k] !== "" && Number(scores[k]) !== existing[k].score;
                       return (
                         <td key={k}>
-                          <input type="number" className="input" style={{ width: 90, borderColor: changed ? "var(--gold-dark)" : undefined }}
+                          <input type="number" inputMode="decimal" className="input" style={{ width: 90, borderColor: changed ? "var(--gold-dark)" : undefined }}
                             value={scores[k] ?? ""}
                             onChange={(e) => { setScores((p) => ({ ...p, [k]: e.target.value })); setVoiceKeys((p) => { if (!p.has(k)) return p; const n = new Set(p); n.delete(k); return n; }); }} />
                         </td>
@@ -295,7 +295,7 @@ export default function GradeEntryPanel({ accountId, appUser, canToggleWindow, c
             </table>
             {roster.length === 0 && <p style={{ padding: 12, color: "var(--steel)" }}>لا يوجد طلاب مسجّلون بهذه الشعبة.</p>}
           </div>
-          <button onClick={saveAll} disabled={busy} className="btn btn-gold">{busy ? "جارٍ الحفظ..." : "حفظ العلامات"}</button>
+          <div className="sticky-actions"><button onClick={saveAll} disabled={busy} className="btn btn-gold">{busy ? "جارٍ الحفظ..." : "حفظ العلامات"}</button></div>
         </>
       )}
     </div>
