@@ -1,0 +1,86 @@
+{
+  "connection": {
+    "kind": "SUPABASE",
+    "url": "https://xttdqktojkfbpombkkdp.supabase.co",
+    "publishable_key": "sb_publishable_yQOpwdnRr-MYmFfpOXX1fw_jzE4zoOk",
+    "schema": "fastgrading"
+  },
+  "identity": {
+    "profile": { "fn": "ai_my_access" },
+    "display_name_path": "display_name",
+    "locale_path": "locale"
+  },
+  "permissions": {
+    "mode": "CALL",
+    "call": { "fn": "ai_my_access" },
+    "allow_path": "allow",
+    "roles_path": "roles"
+  },
+  "sources": [
+    {
+      "code": "pending_work",
+      "name": "ما يحتاج انتباهك الآن",
+      "description": "أعداد الأعمال المعلّقة: امتحانات ناقصة العلامات، صفوف ومواد بلا أستاذ، طلبات إسناد أستاذ ثانٍ، دفعات استيراد، مسودات مراسلات، مخالفات محتوى.",
+      "words": "معلق معلقة المعلقة معلّق انتباه الانتباه اولويات الاولويات مهام المهام ناقص ناقصة الناقصة الان اليوم شو لازم",
+      "requires": "app.use",
+      "kind": "SCREEN",
+      "call": { "fn": "ai_pending_work" }
+    },
+    {
+      "code": "incomplete_exams",
+      "name": "الامتحانات الناقصة العلامات",
+      "description": "قائمة بالامتحانات التي حلّ موعدها وعدد من أُدخلت علاماتهم أقل من المتوقع: اسم الامتحان والصف والمادة والتاريخ والمُدخَل والمتوقَّع (بلا أسماء طلاب).",
+      "words": "امتحان امتحانات الامتحان الامتحانات علامات العلامات ناقص ناقصة الناقصة لم تكتمل غير مكتمل اكتمال ادخال الادخال تأخر متأخر",
+      "requires": "app.use",
+      "kind": "REPORT",
+      "call": { "fn": "ai_incomplete_exams", "args": { "p_limit": 30 } }
+    },
+    {
+      "code": "uncovered_subjects",
+      "name": "صفوف ومواد بلا أستاذ",
+      "description": "الصفوف والمواد التي لا أستاذ أساسي لها.",
+      "words": "اسناد الاسناد استاذ الاستاذ اساتذة الاساتذة معلم المعلمين مادة المواد بلا أستاذ شاغر تغطية التغطية",
+      "requires": "config.manage",
+      "kind": "REPORT",
+      "call": { "fn": "ai_uncovered_subjects" }
+    },
+    {
+      "code": "class_overview",
+      "name": "نظرة على الصفوف ومتوسطاتها",
+      "description": "لكل صف نشط: عدد الطلاب ومتوسط الصف في كل فصل (أرقام مجمَّعة بلا أسماء طلاب).",
+      "words": "صف الصف صفوف الصفوف شعبة الشعب متوسط المتوسط متوسطات المتوسطات معدل المعدل معدلات الطلاب عدد اداء الاداء مستوى",
+      "requires": "reports.view",
+      "kind": "REPORT",
+      "call": { "fn": "ai_class_overview" }
+    },
+    {
+      "code": "my_teaching",
+      "name": "صفوفي ومواد التدريس الخاصة بي",
+      "description": "الصفوف والمواد المسندة إلى المستخدم الحالي كأستاذ.",
+      "words": "صفوفي موادي مسند المسندة اسنادي تدريس التدريس حصصي اعطي ادرّس",
+      "requires": "app.use",
+      "kind": "SCREEN",
+      "call": { "fn": "ai_my_teaching" }
+    },
+    {
+      "code": "help_guides",
+      "name": "أدلة المساعدة (كيف أفعل كذا)",
+      "description": "أدلة البرنامج المتاحة لدور المستخدم: إدخال العلامات، التهيئة، الصلاحيات، التقارير، المراسلات، ترحيل السنة وغيرها. اجعل السؤال كلمات مفتاحية.",
+      "words": "كيف طريقة شرح اشرح دليل الدليل مساعدة المساعدة خطوات اضافة اضف ادخال انشاء صلاحية الصلاحيات تهيئة ترحيل تقرير التقارير استيراد واتساب مراسلات",
+      "requires": "app.use",
+      "kind": "FEATURE",
+      "call": { "fn": "ai_help_search", "args": { "p_query": "{{query}}" } }
+    },
+    {
+      "code": "subscription",
+      "name": "حالة الاشتراك والحدود",
+      "description": "حالة اشتراك المدرسة وتاريخ انتهائه والاستعمال الحالي مقابل الحدود (صفوف، طلاب، مبانٍ، مراحل).",
+      "words": "اشتراك الاشتراك باقة الباقة حد الحد حدود الحدود ينتهي انتهاء تجديد استعمال",
+      "requires": "config.manage",
+      "kind": "FEATURE",
+      "call": { "fn": "ai_subscription" }
+    }
+  ],
+  "records": [],
+  "actions": []
+}

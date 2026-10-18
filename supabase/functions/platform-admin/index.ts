@@ -19,7 +19,7 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const FEATURES = ["whatsapp_notifications"];
+const FEATURES = ["whatsapp_notifications", "ai_assistant"];
 const ACCOUNT_TYPES = ["solo_teacher", "school_enterprise"];
 
 function readLimits(body: any) {
