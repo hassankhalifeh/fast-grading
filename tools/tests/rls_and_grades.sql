@@ -186,6 +186,14 @@ begin
   r := r || format(E'%s T7 service_role has full table privileges everywhere (%s tables without)\n', case when n = 0 then 'PASS' else 'FAIL' end, n);
   if n <> 0 then fails := fails + 1; end if;
 
+  -- ---------- T8: anonymous visitors can execute only the two public RPCs ----------
+  select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+    where ns.nspname = 'fastgrading' and p.prokind in ('f', 'p') and has_function_privilege('anon', p.oid, 'execute')
+      and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
+      and p.proname not in ('list_public_plans', 'submit_account_application');
+  r := r || format(E'%s T8 anon can execute no function except the two public RPCs (%s extra)\n', case when n = 0 then 'PASS' else 'FAIL' end, n);
+  if n <> 0 then fails := fails + 1; end if;
+
   r := r || format(E'%s\n', case when fails = 0 then 'VERDICT: ALL PASS (nothing was committed)' else 'VERDICT: ' || fails || ' FAILED (nothing was committed)' end);
   raise exception E'\n%', r;
 end $t$;
