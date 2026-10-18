@@ -178,6 +178,14 @@ begin
     r := r || format(E'SKIP T6e could not create the request fixture (%s)\n', sqlerrm);
   end;
 
+  -- ---------- T7: the backend role (service_role, used by every Edge Function) can use every table ----------
+  select count(*) into n from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
+    where ns.nspname = 'fastgrading' and c.relkind in ('r', 'p')
+      and not (has_table_privilege('service_role', c.oid, 'select') and has_table_privilege('service_role', c.oid, 'insert')
+               and has_table_privilege('service_role', c.oid, 'update') and has_table_privilege('service_role', c.oid, 'delete'));
+  r := r || format(E'%s T7 service_role has full table privileges everywhere (%s tables without)\n', case when n = 0 then 'PASS' else 'FAIL' end, n);
+  if n <> 0 then fails := fails + 1; end if;
+
   r := r || format(E'%s\n', case when fails = 0 then 'VERDICT: ALL PASS (nothing was committed)' else 'VERDICT: ' || fails || ' FAILED (nothing was committed)' end);
   raise exception E'\n%', r;
 end $t$;
