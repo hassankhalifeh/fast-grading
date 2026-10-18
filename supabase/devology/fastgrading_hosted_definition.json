@@ -19,68 +19,77 @@
   "sources": [
     {
       "code": "pending_work",
-      "name": "ما يحتاج انتباهك الآن",
-      "description": "أعداد الأعمال المعلّقة: امتحانات ناقصة العلامات، صفوف ومواد بلا أستاذ، طلبات إسناد أستاذ ثانٍ، دفعات استيراد، مسودات مراسلات، مخالفات محتوى.",
-      "words": "معلق معلقة المعلقة معلّق انتباه الانتباه اولويات الاولويات مهام المهام ناقص ناقصة الناقصة الان اليوم شو لازم",
+      "name": "ما يحتاج انتباهك الآن (Pending work)",
+      "description": "أعداد الأعمال المعلّقة: امتحانات ناقصة العلامات، صفوف ومواد بلا أستاذ، طلبات إسناد أستاذ ثانٍ، دفعات استيراد، مسودات مراسلات، مخالفات محتوى. Counts of pending work and what needs attention now: incomplete exams, classes or subjects without a teacher, second-teacher requests, imports to review, draft message batches, content violations.",
+      "words": "معلق معلقة المعلقة معلّق معلقات المعلقات انتباه الانتباه انتباهي انتباهك يحتاج تحتاج احتاج يلزم لازم اولويات الاولويات مهام المهام مهامي ناقص ناقصة الناقصة الان اليوم شو pending attention needs need tasks todo priorities overview today",
       "requires": "app.use",
       "kind": "SCREEN",
       "call": { "fn": "ai_pending_work" }
     },
     {
       "code": "incomplete_exams",
-      "name": "الامتحانات الناقصة العلامات",
-      "description": "قائمة بالامتحانات التي حلّ موعدها وعدد من أُدخلت علاماتهم أقل من المتوقع: اسم الامتحان والصف والمادة والتاريخ والمُدخَل والمتوقَّع (بلا أسماء طلاب).",
-      "words": "امتحان امتحانات الامتحان الامتحانات علامات العلامات ناقص ناقصة الناقصة لم تكتمل غير مكتمل اكتمال ادخال الادخال تأخر متأخر",
+      "name": "الامتحانات الناقصة العلامات (Incomplete exams)",
+      "description": "قائمة بالامتحانات التي حلّ موعدها وعدد من أُدخلت علاماتهم أقل من المتوقع: اسم الامتحان والصف والمادة والتاريخ والمُدخَل والمتوقَّع (بلا أسماء طلاب). Exams whose date has passed with fewer grades entered than expected: exam, class, subject, date, entered, expected (no student names).",
+      "words": "امتحان امتحانات الامتحان الامتحانات امتحاناتي علامات العلامات علاماتي ناقص ناقصة الناقصة نواقص لم تكتمل غير مكتمل اكتمال ادخال الادخال متأخر تأخر متبقي exam exams grades missing incomplete unfinished entered overdue",
       "requires": "app.use",
       "kind": "REPORT",
       "call": { "fn": "ai_incomplete_exams", "args": { "p_limit": 30 } }
     },
     {
       "code": "uncovered_subjects",
-      "name": "صفوف ومواد بلا أستاذ",
-      "description": "الصفوف والمواد التي لا أستاذ أساسي لها.",
-      "words": "اسناد الاسناد استاذ الاستاذ اساتذة الاساتذة معلم المعلمين مادة المواد بلا أستاذ شاغر تغطية التغطية",
+      "name": "صفوف ومواد بلا أستاذ (Subjects without a teacher)",
+      "description": "الصفوف والمواد التي لا أستاذ أساسي لها. Classes and subjects that have no primary teacher assigned.",
+      "words": "اسناد الاسناد استاذ الاستاذ اساتذة الاساتذة معلم معلمين المعلمين مادة المواد بلا شاغر تغطية التغطية teacher teachers assignment assigned unassigned coverage vacant subject subjects",
       "requires": "config.manage",
       "kind": "REPORT",
       "call": { "fn": "ai_uncovered_subjects" }
     },
     {
       "code": "class_overview",
-      "name": "نظرة على الصفوف ومتوسطاتها",
-      "description": "لكل صف نشط: عدد الطلاب ومتوسط الصف في كل فصل (أرقام مجمَّعة بلا أسماء طلاب).",
-      "words": "صف الصف صفوف الصفوف شعبة الشعب متوسط المتوسط متوسطات المتوسطات معدل المعدل معدلات الطلاب عدد اداء الاداء مستوى",
+      "name": "نظرة على الصفوف ومتوسطاتها (Class overview and averages)",
+      "description": "لكل صف نشط: عدد الطلاب ومتوسط الصف في كل فصل (أرقام مجمَّعة بلا أسماء طلاب). For each active class: number of students and the class average per term (aggregates only, no student names).",
+      "words": "صف الصف صفوف الصفوف شعبة الشعب متوسط المتوسط متوسطات المتوسطات معدل المعدل معدلات الطلاب عدد اداء الاداء مستوى نتائج النتائج class classes average averages performance results students count overview term",
       "requires": "reports.view",
       "kind": "REPORT",
       "call": { "fn": "ai_class_overview" }
     },
     {
       "code": "my_teaching",
-      "name": "صفوفي ومواد التدريس الخاصة بي",
-      "description": "الصفوف والمواد المسندة إلى المستخدم الحالي كأستاذ.",
-      "words": "صفوفي موادي مسند المسندة اسنادي تدريس التدريس حصصي اعطي ادرّس",
+      "name": "صفوفي ومواد التدريس الخاصة بي (My classes and subjects)",
+      "description": "الصفوف والمواد المسندة إلى المستخدم الحالي كأستاذ. The classes and subjects assigned to the current user as a teacher.",
+      "words": "صفوفي موادي مسند المسندة اسنادي تدريس التدريس حصصي ادرس اعطي my classes subjects teaching assigned timetable",
       "requires": "app.use",
       "kind": "SCREEN",
       "call": { "fn": "ai_my_teaching" }
     },
     {
       "code": "help_guides",
-      "name": "أدلة المساعدة (كيف أفعل كذا)",
-      "description": "أدلة البرنامج المتاحة لدور المستخدم: إدخال العلامات، التهيئة، الصلاحيات، التقارير، المراسلات، ترحيل السنة وغيرها. اجعل السؤال كلمات مفتاحية.",
-      "words": "كيف طريقة شرح اشرح دليل الدليل مساعدة المساعدة خطوات اضافة اضف ادخال انشاء صلاحية الصلاحيات تهيئة ترحيل تقرير التقارير استيراد واتساب مراسلات",
+      "name": "أدلة المساعدة: كيف أفعل كذا (Help guides)",
+      "description": "أدلة البرنامج المتاحة لدور المستخدم: إدخال العلامات، التهيئة، الصلاحيات، التقارير، المراسلات، ترحيل السنة وغيرها. اجعل السؤال كلمات مفتاحية. Step-by-step help guides for the user's role: grade entry, school setup, permissions, reports, parent messages, year rollover. Pass keywords as the query.",
+      "words": "كيف طريقة شرح اشرح دليل الدليل ادلة الادلة مساعدة المساعدة خطوات اضافة اضف ادخال انشاء صلاحية الصلاحيات تهيئة ترحيل تقرير التقارير استيراد واتساب مراسلات ساعدني how guide guides help steps add enter create permission permissions setup rollover report import whatsapp tutorial",
       "requires": "app.use",
       "kind": "FEATURE",
       "call": { "fn": "ai_help_search", "args": { "p_query": "{{query}}" } }
     },
     {
       "code": "subscription",
-      "name": "حالة الاشتراك والحدود",
-      "description": "حالة اشتراك المدرسة وتاريخ انتهائه والاستعمال الحالي مقابل الحدود (صفوف، طلاب، مبانٍ، مراحل).",
-      "words": "اشتراك الاشتراك باقة الباقة حد الحد حدود الحدود ينتهي انتهاء تجديد استعمال",
+      "name": "حالة الاشتراك والحدود (Subscription and limits)",
+      "description": "حالة اشتراك المدرسة وتاريخ انتهائه والاستعمال الحالي مقابل الحدود (صفوف، طلاب، مبانٍ، مراحل). School subscription status, expiry date and current usage against limits.",
+      "words": "اشتراك الاشتراك باقة الباقة حد الحد حدود الحدود ينتهي انتهاء تجديد استعمال subscription plan limit limits expiry expires renewal usage",
       "requires": "config.manage",
       "kind": "FEATURE",
       "call": { "fn": "ai_subscription" }
     }
   ],
-  "records": [],
+  "records": [
+    {
+      "type": "class",
+      "name": "صف دراسي (Class)",
+      "description": "صف بمعرّفه: اسمه وعدد طلابه ومتوسطات فصوله (أرقام مجمَّعة بلا أسماء طلاب). One class by id: name, student count and term averages (aggregates only).",
+      "words": "صف الصف شعبة الشعبة متوسط المتوسط class average",
+      "requires": "reports.view",
+      "call": { "fn": "ai_class_record", "args": { "p_id": "{{id}}" } }
+    }
+  ],
   "actions": []
 }

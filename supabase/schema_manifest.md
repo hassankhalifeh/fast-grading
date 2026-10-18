@@ -1,17 +1,17 @@
 # Schema manifest — fastgrading (production baseline)
 
-Recorded 2026-10-18 from Supabase project `xttdqktojkfbpombkkdp`, schema `fastgrading`, after migration 62 (function hashes include execute privileges).
+Recorded 2026-10-18 from Supabase project `xttdqktojkfbpombkkdp`, schema `fastgrading`, after migration 65 (function hashes include execute privileges).
 Produced by the summary form of [`tools/schema_manifest.sql`](../tools/schema_manifest.sql).
 
 | kind       |   n | hash                               |
 |------------|----:|------------------------------------|
-| constraint | 300 | `4332b83d53338f42402eed469d9ca05a` |
+| constraint | 303 | `a9090b945889dfea92b3075353ca0e43` |
 | enum       |  20 | `cf75966bbb661ce626e87d6c2a87971d` |
-| function   | 112 | `998aeb5ca540808d9a76575e7ac3c35c` |
-| grant      | 158 | `15092c1ed3316d17cb1cdde97ba8e47d` |
-| index      | 179 | `c169de76c45b5f74f5aed1b511c8bfb4` |
-| policy     | 170 | `ed21e3f2ed71d9ed0793dd65f9521c54` |
-| table      |  66 | `0ff6fa10c295b585faa542ceac3696df` |
+| function   | 124 | `872152d632fa924ec495c3d4e8103f49` |
+| grant      | 160 | `e687dbe9ae3a4cb3c0e196f374204a0c` |
+| index      | 180 | `3bf8cf6a083ab22d99c4dceb698a5c02` |
+| policy     | 171 | `cb412c240a932fa84b462ce55f63f329` |
+| table      |  67 | `8118bfa0d72e364131d5656b46adb0d9` |
 | trigger    |  36 | `a516e9c92d2539fa2fc3ef5c2190d246` |
 | view       |  13 | `d43f445e37f672440272665c630249f7` |
 
